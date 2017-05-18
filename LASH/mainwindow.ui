@@ -31,7 +31,7 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>171</width>
+         <width>201</width>
          <height>16</height>
         </rect>
        </property>
@@ -102,7 +102,7 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>101</width>
+         <width>121</width>
          <height>16</height>
         </rect>
        </property>
@@ -131,7 +131,7 @@
         <rect>
          <x>10</x>
          <y>110</y>
-         <width>111</width>
+         <width>131</width>
          <height>21</height>
         </rect>
        </property>
@@ -170,7 +170,7 @@
         <rect>
          <x>10</x>
          <y>190</y>
-         <width>101</width>
+         <width>121</width>
          <height>16</height>
         </rect>
        </property>
@@ -284,7 +284,7 @@
         <rect>
          <x>10</x>
          <y>90</y>
-         <width>85</width>
+         <width>91</width>
          <height>16</height>
         </rect>
        </property>
@@ -297,7 +297,7 @@
         <rect>
          <x>10</x>
          <y>110</y>
-         <width>121</width>
+         <width>131</width>
          <height>16</height>
         </rect>
        </property>
@@ -630,7 +630,7 @@
      <x>0</x>
      <y>0</y>
      <width>495</width>
-     <height>19</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuArquivo">
