@@ -1,16 +1,16 @@
-
-#include "mainwindow.h"
-#include "ui_mainwindow.h"
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include "varclasses.h"
 #include <QMessageBox>
-#include "results.h"
-#include<QFileDialog>
-#include "secondwindow.h"
+#include <QFileDialog>
 #include <fstream>
 #include <iomanip>
+#include <map>
+#include "results.h"
+#include "secondwindow.h"
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "varclasses.h"
 
 using namespace std;
     
@@ -163,26 +163,14 @@ using namespace std;
         float f0, bestf, worstf, xnstd, criter_change, tot_dias;
         tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, xx, sf, criter, cf, bestx, worstx, gnrng, xf;
-        vector< vector<float> > x, cx, s, result;
-        vector<int> lcs;
-
-
-        /*cout << "nopt: " << nopt << endl;
-        cout << "npg: " << npg << endl;
-        cout << "nps: " << nps << endl;
-        cout << "nspl: " << nspl << endl;
-        cout << "mings: " << mings << endl;
-        cout << "npt: " << npt << endl;*/
-
-        //preechendo vetor lcs
-        for(int i = 0; i < 100; i++)
-            lcs.push_back(0);
+        vector<float> bound, xx, sf, criter, cf, bestx, worstx, xf;
+        vector<vector<float>> cx, s, result;
 
         for(int i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
 
-        iseed = rand();
+        vector<vector<float>> x;
+
         for(int i = 0; i < npt; i++) {
             vector<float> row;
             for(int j = 0; j < nopt; j++)
@@ -209,7 +197,7 @@ using namespace std;
         /* código real
         for(int i = 0; i < npt; i++) {
             xf.push_back(hydrological_routine(x.at(i), tot_dias));
-            icall += 1;
+            icall++;
 
             cout << i + 1 << " " << x.at(i).at(0) << " " << x.at(i).at(1) << " " << x.at(i).at(2) << " " << x.at(i).at(3) << " " << x.at(i).at(4) << " " << x.at(i).at(5) << " " << x.at(i).at(6) << " " << xf.at(i) << endl;
         }
@@ -288,11 +276,87 @@ using namespace std;
         xf.push_back(1.63166);
         xf.push_back(1.83934);
         xf.push_back(1.49267);
+        xf.push_back(3.9123); //fake
         xf.push_back(2.8526);
         xf.push_back(1.71648);
         //fim do código para fins acadêmicos
 
+        vector<pair<float, vector<float>>> xf_to_f;
 
+        //liga x com xf
+        for(int i = 0; i < npt; i++)
+            xf_to_f.push_back(make_pair(xf.at(i), x.at(i)));
+
+        sort(xf_to_f.begin(), xf_to_f.end());
+
+        vector<vector<float>> x_ordered;
+
+        //cria matriz x ordenada
+        for(int i = 0; i < npt; i++)
+            x_ordered.push_back(xf_to_f.at(i).second);
+
+        bestx = x_ordered.at(0);    //bestx recebe melhores parâmetros
+        bestf = xf_to_f.at(0).first;   //bestf recebe melhor xf
+
+        worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
+        worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
+
+        //exibir dados
+        cout << "The initial loop: 0" << endl;
+        cout << "BESTF: " << bestf << endl;
+        cout << "BESTX: ";
+        for(int i = 0; i < bestx.size(); i++)
+            cout << bestx.at(i) << " ";
+        cout << "\nWORSTF: " << worstf << endl;
+        cout << "WORSTX: ";
+        for(int i = 0; i < worstx.size(); i++)
+            cout << worstx.at(i) << " ";
+        cout << endl;
+
+        int caux = 0;
+
+        //laço real -> while(icall < maxn) { //loop contando iterações
+        while(caux < 1) {
+            for(int igs = 0; igs < ngs; igs++) {    //0 a 5
+                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+                    int k2 = k1 * ngs + igs;
+
+                    cf.push_back(xf.at(k2));    //cf recebe xf embaralhado
+                    cx.push_back(x_ordered.at(k2)); //cx recebe x embaralhado
+                }
+            }
+
+            for(int i = 0; i < nspl; i++) { //0 a 15
+                vector<int> lcs(8);
+                lcs.at(0) = 0;
+
+                for(int j = 1; j < nps; j++) {
+                    bool auxb = true; //bool auxiliar pra posição
+
+                    for(int k = 0; k < 1000; k++) {
+                        int p = 1 + (static_cast <int> (rand()) % static_cast <int> (14));
+
+                        for(int l = 0; l < lcs.size(); l++) {
+                            if(p == lcs.at(l)) {
+                                auxb = false; //se já possui a posição, sai pra gerar uma nova
+                                break;
+                            }
+                        }
+
+                        if(auxb) {  //se não possui a posição, adiciona em lcs
+                            lcs.at(j) = p;
+                            break;
+                        }
+                    }
+                    //sort(lcs.begin(), lcs.end());
+                    for(int sl = 0; sl < lcs.size(); sl++)
+                        cout << lcs.at(sl) << " ";
+                    cout << endl;
+                }
+            }
+
+            caux++;
+        }
     }
 
 
