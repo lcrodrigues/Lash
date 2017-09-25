@@ -163,7 +163,7 @@ using namespace std;
         float f0, bestf, worstf, xnstd, criter_change, tot_dias;
         tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, xx, sf, criter, cf, bestx, worstx, xf;
+        vector<float> bound, xx, criter, cf, bestx, worstx, xf;
         vector<vector<float>> cx, result;
 
         for(int i = 0; i < bu.size(); i++)
@@ -350,51 +350,78 @@ using namespace std;
                         }
                     }
 
-                    for(int sl = 0; sl < lcs.size(); sl++)
+                    /*for(int sl = 0; sl < lcs.size(); sl++)
                         cout << lcs.at(sl) << " ";
                     cout << endl;
+                    ver se tá certo no lab*/
                 }
 
                 sort(lcs.begin(), lcs.end());   //ordena lcs
 
                 vector<vector<float>> s(nps, vector<float>(nopt));
                 vector<float> snew;
+                vector<float> sf(nps);
 
                 for(int j = 0; j < nps; j++) {
                     //s.at(j) = cx.at(lcs);
                     s.at(j) = cx.at(lcs.at(j) * count_nspl);  //palpite, s recebe partes aleatórias de cx
-                    sf.push_back(cf.at(lcs.at(j)));
+                    sf.at(j) = cf.at(lcs.at(j));
                  }
 
-                //chamar cceua
+                //chamar cceua (corrigir a chamada)
+                float cce = cceua(snew, s, sf, bl, bu, tot_dias, icall, maxn);
+
+                //continuar pós retorno do cce
             }
             caux++;
         }
     }
 
-    float cceua(vector<float> snew, vector<vector<float>> s, vector<float> sf, float bl, float bu, int icall, int maxn) {
+    float MainWindow::cceua(vector<float> snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn) {
         vector<float> sb = s.at(0); //sb melhor s
-        vector<float> sw = s.at(s.at(nopt - 1)); //sw pior s
+        vector<float> sw = s.at(6); //sw pior s
 
         float fb = sf.at(0);   //fb melhor sf
         float fw = sf.at(sf.size() - 1);    //fw pior sf
         float alpha = 1.0;
 
         vector<float> ce;
-        for(int j = 0; j < nps; j++) {
+        for(int j = 0; j < sf.size() - 1; j++) { //até 8 - 1
             float sum = 0;
 
-            for(int k = 0; k < nopt - 1; k++)
+            for(int k = 0; k < s.at(0).size(); k++) //até 7
                 sum += s.at(j).at(k);
 
-            float media = sum / (nopt - 1); //media da linha de s, excluindo o pior ponto
+            float media = sum / (7 - 1); //media da linha de s, excluindo o pior ponto
+                                         //7 é o equivalente a nopt
             ce.push_back(media);
 
-            svalue = ce.at(j) + alpha * (ce.at(j) - sw.at(j));
+            float svalue = ce.at(j) + alpha * (ce.at(j) - sw.at(j));  //calcula valor pro snew
             snew.push_back(svalue);
-
-            //continua...
         }
+
+
+        bool ibound = false;
+
+        for(int j = 0; j < snew.size(); j++) { //verifica os limites
+            float s1, s2;
+            s1 = snew.at(j) - bl.at(j);
+            s2 = bu.at(j) - snew.at(j);
+
+            if(s1 < 0 || s2 < 0) {
+                ibound = true;
+                break;
+            }
+        }
+
+        if(ibound) {   //recalcula caso fora de limites
+            for(int j = 0; j < snew.size(); j++)
+                snew.at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+        }
+
+        float fnew = 4; //hydrological_routine(snew, tot_dias);
+        return fnew;
+
     }
 
 
