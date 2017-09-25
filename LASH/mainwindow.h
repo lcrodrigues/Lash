@@ -21,8 +21,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-
-
 private slots:
 
     void on_first_ok_clicked();
@@ -36,6 +34,8 @@ private slots:
     void on_actionAjuda_triggered();
 
     void sceua();
+
+    float cceua(vector<vector<float>> s, vector<float> sf, float bl, float bu, int icall, int maxn);
 
     float hydrological_routine(vector<float> x, float tot_dias);
 

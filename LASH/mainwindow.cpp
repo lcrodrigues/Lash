@@ -164,7 +164,7 @@ using namespace std;
         tot_dias = ui->num_dias->text().toInt(NULL);
 
         vector<float> bound, xx, sf, criter, cf, bestx, worstx, xf;
-        vector<vector<float>> cx, s, result;
+        vector<vector<float>> cx, result;
 
         for(int i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
@@ -326,6 +326,7 @@ using namespace std;
                 }
             }
 
+            int count_nspl = 1;
             for(int i = 0; i < nspl; i++) { //0 a 15
                 vector<int> lcs(8);
                 lcs.at(0) = 0;
@@ -348,14 +349,51 @@ using namespace std;
                             break;
                         }
                     }
-                    //sort(lcs.begin(), lcs.end());
+
                     for(int sl = 0; sl < lcs.size(); sl++)
                         cout << lcs.at(sl) << " ";
                     cout << endl;
                 }
-            }
 
+                sort(lcs.begin(), lcs.end());   //ordena lcs
+
+                vector<vector<float>> s(nps, vector<float>(nopt));
+                vector<float> snew;
+
+                for(int j = 0; j < nps; j++) {
+                    //s.at(j) = cx.at(lcs);
+                    s.at(j) = cx.at(lcs.at(j) * count_nspl);  //palpite, s recebe partes aleatórias de cx
+                    sf.push_back(cf.at(lcs.at(j)));
+                 }
+
+                //chamar cceua
+            }
             caux++;
+        }
+    }
+
+    float cceua(vector<float> snew, vector<vector<float>> s, vector<float> sf, float bl, float bu, int icall, int maxn) {
+        vector<float> sb = s.at(0); //sb melhor s
+        vector<float> sw = s.at(s.at(nopt - 1)); //sw pior s
+
+        float fb = sf.at(0);   //fb melhor sf
+        float fw = sf.at(sf.size() - 1);    //fw pior sf
+        float alpha = 1.0;
+
+        vector<float> ce;
+        for(int j = 0; j < nps; j++) {
+            float sum = 0;
+
+            for(int k = 0; k < nopt - 1; k++)
+                sum += s.at(j).at(k);
+
+            float media = sum / (nopt - 1); //media da linha de s, excluindo o pior ponto
+            ce.push_back(media);
+
+            svalue = ce.at(j) + alpha * (ce.at(j) - sw.at(j));
+            snew.push_back(svalue);
+
+            //continua...
         }
     }
 
