@@ -383,7 +383,7 @@ using namespace std;
 
         float fb = sf.at(0);   //fb melhor sf
         float fw = sf.at(sf.size() - 1);    //fw pior sf
-        float alpha = 1.0;
+        float alpha = 1.0, beta = 0.5;
 
         vector<float> ce;
         for(int j = 0; j < sf.size() - 1; j++) { //até 8 - 1
@@ -420,6 +420,24 @@ using namespace std;
         }
 
         float fnew = 4; //hydrological_routine(snew, tot_dias);
+        icall++;
+
+        if(fnew > fw) { //reflexão falhou, tentando ponto de contração
+            for(int j = 0; j < snew.size(); j++)
+                snew.at(j) = sw + beta * (ce.at(j) - sw);
+
+            fnew = hydrological_routine(snew, tot_dias);
+            icall++;
+
+            if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
+                for(int j = 0; j < snew.size(); j++)
+                    snew.at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+
+                fnew = hydrological_routine(snew, tot_dias);
+                icall++;
+            }
+        }
+
         return fnew;
 
     }
