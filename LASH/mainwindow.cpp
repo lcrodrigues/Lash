@@ -318,61 +318,80 @@ using namespace std;
         //laço real -> while(icall < maxn) { //loop contando iterações
         while(caux < 1) {
             for(int igs = 0; igs < ngs; igs++) {    //0 a 5
+                vector<vector<float>> cx(npg, vector<float>(nopt));
+                vector<float> cf(npg);
+
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
                     int k2 = k1 * ngs + igs;
 
-                    cf.push_back(xf.at(k2));    //cf recebe xf embaralhado
-                    cx.push_back(x_ordered.at(k2)); //cx recebe x embaralhado
+                    cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
+                    cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
                 }
-            }
+            
 
-            int count_nspl = 1;
-            for(int i = 0; i < nspl; i++) { //0 a 15
-                vector<int> lcs(8);
-                lcs.at(0) = 0;
+                for(int i = 0; i < nspl; i++) { //0 a 15
+                    vector<int> lcs(8);
+                    lcs.at(0) = 0;
 
-                for(int j = 1; j < nps; j++) {
-                    bool auxb = true; //bool auxiliar pra posição
+                    for(int j = 1; j < nps; j++) {
+                        bool auxb = true; //bool auxiliar pra posição
 
-                    for(int k = 0; k < 1000; k++) {
-                        int p = 1 + (static_cast <int> (rand()) % static_cast <int> (14));
+                        for(int k = 0; k < 1000; k++) {
+                            //erro nessa porra
+                            //int p = 1 + floor(npg + 0.5 - sqrt(pow((npg + 0.5), 2) - npg * (npg + 1) * (rand() % 14 + 1)));
 
-                        for(int l = 0; l < lcs.size(); l++) {
-                            if(p == lcs.at(l)) {
-                                auxb = false; //se já possui a posição, sai pra gerar uma nova
+                            int p = rand() % 14 + 1;
+
+                            for(int l = 0; l < lcs.size(); l++) {
+                                if(p == lcs.at(l)) {
+                                    auxb = false; //se já possui a posição, sai pra gerar uma nova
+                                    break;
+                                }
+                            }
+
+                            if(auxb) {  //se não possui a posição, adiciona em lcs
+                                lcs.at(j) = p;
                                 break;
                             }
                         }
-
-                        if(auxb) {  //se não possui a posição, adiciona em lcs
-                            lcs.at(j) = p;
-                            break;
-                        }
                     }
 
-                    /*for(int sl = 0; sl < lcs.size(); sl++)
+                    sort(lcs.begin(), lcs.end());   //ordena lcs
+
+                    for(int sl = 0; sl < lcs.size(); sl++)
                         cout << lcs.at(sl) << " ";
                     cout << endl;
-                    ver se tá certo no lab*/
+
+
+                    vector<vector<float>> s(nps, vector<float>(nopt));
+                    vector<float> snew;
+                    vector<float> sf(nps);
+
+                    for(int j = 0; j < nps; j++) {
+                        //s.at(j) = cx.at(lcs);
+                        s.at(j) = cx.at(lcs.at(j));  //palpite, s recebe partes aleatórias de cx
+                        sf.at(j) = cf.at(lcs.at(j)); //palpite também
+                     }
+
+                    //chamar cceua (corrigir a chamada)
+                    float cce = cceua(snew, s, sf, bl, bu, tot_dias, icall, maxn);
+                    
+                    //testar a partir daqui, pode conter erros;
+                    s.at(nps - 1) = snew;
+                    sf.at(nps - 1) = cce;
+
+                    for(int j = 0; j < nps; j++) {  //põe o simplex no complex
+                        cx.at(lcs.at(j)) = s.at(j);
+                        cf.at(lcs.at(j)) = sf.at(j); 
+                    }
                 }
 
-                sort(lcs.begin(), lcs.end());   //ordena lcs
-
-                vector<vector<float>> s(nps, vector<float>(nopt));
-                vector<float> snew;
-                vector<float> sf(nps);
-
-                for(int j = 0; j < nps; j++) {
-                    //s.at(j) = cx.at(lcs);
-                    s.at(j) = cx.at(lcs.at(j) * count_nspl);  //palpite, s recebe partes aleatórias de cx
-                    sf.at(j) = cf.at(lcs.at(j));
-                 }
-
-                //chamar cceua (corrigir a chamada)
-                float cce = cceua(snew, s, sf, bl, bu, tot_dias, icall, maxn);
-
-                //continuar pós retorno do cce
+                //põe o complex na população
+                x_ordered.at(k2) = cx.at(k1);
+                xf.at(k2) = cf.at(k1);
             }
+
+
             caux++;
         }
     }
@@ -424,7 +443,7 @@ using namespace std;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
             for(int j = 0; j < snew.size(); j++)
-                snew.at(j) = sw + beta * (ce.at(j) - sw);
+                snew.at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
             fnew = hydrological_routine(snew, tot_dias);
             icall++;
