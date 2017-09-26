@@ -318,92 +318,85 @@ using namespace std;
         //laço real -> while(icall < maxn) { //loop contando iterações
         while(caux < 1) {
             for(int igs = 0; igs < ngs; igs++) {    //0 a 5
-                vector<vector<float>> cx(npg, vector<float>(nopt));
-                vector<float> cf(npg);
-
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
                     int k2 = k1 * ngs + igs;
 
-                    cout << "k1 " << k1 << ", k2 " << k2 << endl;
-
-                    cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
-                    cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
+                    cf.push_back(xf.at(k2));    //cf recebe xf embaralhado
+                    cx.push_back(x_ordered.at(k2)); //cx recebe x embaralhado
                 }
-            
+            }
 
-                for(int i = 0; i < nspl; i++) { //0 a 15
-                    vector<int> lcs(8);
-                    lcs.at(0) = 0;
+            int count_nspl = 1;
+            for(int i = 0; i < nspl; i++) { //0 a 15
+                vector<int> lcs(8);
+                lcs.at(0) = 0;
 
-                    int size = 14;
-                    vector<int> aux_p(size);
-                    for(int l = 0; l < aux_p.size(); l++)
-                        aux_p.at(l) = l + 1;
+                for(int j = 1; j < nps; j++) {
+                    bool auxb = true; //bool auxiliar pra posição
 
-                    for(int j = 1; j < nps; j++) {
-                        bool auxb = true; //bool auxiliar pra posição
+                    for(int k = 0; k < 1000; k++) {
+                        int p = 1 +  floor(npg + 0.5 - sqrt(pow((npg + 0.5), 2) - npg * (npg + 1) * (static_cast <int> (rand()) % static_cast <int> (14))));
+                        //1 + floor(npg+0.5-sqrt((npg+0.5)^2 - npg*(npg+1)*rand));
 
-                        int r = rand() % size;
-                        size--;
-
-                        lcs.at(j) = aux_p.at(r);
-                        aux_p.erase(aux_p.begin() + r);
-
-                        /*for(int k = 0; k < 1000; k++) {
-
-                            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                            int p = 1 + floor(npg + 0.5 - sqrt(pow((npg + 0.5), 2) - npg * (npg + 1) * r));
-
-                            for(int l = 0; l < lcs.size(); l++) {
-                                if(p == lcs.at(l)) {
-                                    auxb = false; //se já possui a posição, sai pra gerar uma nova
-                                    break;
-                                }
-                            }
-
-                            if(auxb) {  //se não possui a posição, adiciona em lcs
-                                lcs.at(j) = p;
+                        for(int l = 0; l < lcs.size(); l++) {
+                            if(p == lcs.at(l)) {
+                                auxb = false; //se já possui a posição, sai pra gerar uma nova
                                 break;
                             }
-                        } */
+                        }
+
+                        if(auxb) {  //se não possui a posição, adiciona em lcs
+                            lcs.at(j) = p;
+                            break;
+                        }
                     }
 
-                    sort(lcs.begin(), lcs.end());   //ordena lcs
-
-                    vector<vector<float>> s(nps, vector<float>(nopt));
-                    vector<float> snew;
-                    vector<float> sf(nps);
-
-                    for(int j = 0; j < nps; j++) {
-                        //s.at(j) = cx.at(lcs);
-                        s.at(j) = cx.at(lcs.at(j));  //palpite, s recebe partes aleatórias de cx
-                        sf.at(j) = cf.at(lcs.at(j)); //palpite também
-                     }
-
-                    //chamar cceua (corrigir a chamada)
-                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias, icall, maxn);
-
-                    //testar a partir daqui, pode conter erros;
-                 /*   s.at(nps - 1) = snew;
-                    sf.at(nps - 1) = cce;
-
-                    for(int j = 0; j < nps; j++) {  //põe o simplex no complex
-                        cx.at(lcs.at(j)) = s.at(j);
-                        cf.at(lcs.at(j)) = sf.at(j); 
-                    }*/
+                    /*for(int sl = 0; sl < lcs.size(); sl++)
+                        cout << lcs.at(sl) << " ";
+                    cout << endl;
+                    ver se tá certo no lab*/
                 }
 
-                //põe o complex na população
-            //    x_ordered.at(k2) = cx.at(k1);
-             //   xf.at(k2) = cf.at(k1);
+                sort(lcs.begin(), lcs.end());   //ordena lcs
 
+                vector<vector<float>> s(nps, vector<float>(nopt));
+                vector<float> snew;
+                vector<float> sf(nps);
 
+                for(int j = 0; j < nps; j++) {
+                    //s.at(j) = cx.at(lcs);
+                    s.at(j) = cx.at(lcs.at(j) * count_nspl);  //palpite, s recebe partes aleatórias de cx
+                    sf.at(j) = cf.at(lcs.at(j) * count_nspl); //palpite também
+                 }
+
+                //chamar cceua (corrigir a chamada)
+                float cce = cceua(snew, s, sf, bl, bu, tot_dias, icall, maxn);
+                
+                //testar a partir daqui, pode conter erros;
+                s.at(nps - 1) = snew;
+                sf.at(nps - 1) = cce;
+
+                for(int j = 0; j < nps; j++) {  //põe o simplex no complex
+                    cx.at(lcs.at(j) * count_nspl) = s.at(j);
+                    cf.at(lcs.at(j) * count_nspl) = sf.at(j); 
+                }
+
+                ++count_nspl;
+            }
+
+            for(int igs = 0; igs < ngs; igs++) {    //repõe o complex na população
+                for(int k1 = 0; k1 < npg; k1++) {   
+                    int k2 = k1 * ngs + igs;
+
+                    x_ordered.at(k2) = cx.at(k1);
+                    xf.at(k2) = cf.at(k1);
+                }
             }
             caux++;
         }
     }
 
-    float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn) {
+    float MainWindow::cceua(vector<float> snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn) {
         vector<float> sb = s.at(0); //sb melhor s
         vector<float> sw = s.at(6); //sw pior s
 
@@ -423,16 +416,16 @@ using namespace std;
             ce.push_back(media);
 
             float svalue = ce.at(j) + alpha * (ce.at(j) - sw.at(j));  //calcula valor pro snew
-            snew->push_back(svalue);
+            snew.push_back(svalue);
         }
 
 
         bool ibound = false;
 
-        for(int j = 0; j < snew->size(); j++) { //verifica os limites
+        for(int j = 0; j < snew.size(); j++) { //verifica os limites
             float s1, s2;
-            s1 = snew->at(j) - bl.at(j);
-            s2 = bu.at(j) - snew->at(j);
+            s1 = snew.at(j) - bl.at(j);
+            s2 = bu.at(j) - snew.at(j);
 
             if(s1 < 0 || s2 < 0) {
                 ibound = true;
@@ -441,31 +434,27 @@ using namespace std;
         }
 
         if(ibound) {   //recalcula caso fora de limites
-            for(int j = 0; j < snew->size(); j++)
-                snew->at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+            for(int j = 0; j < snew.size(); j++)
+                snew.at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
         }
 
         float fnew = 4; //hydrological_routine(snew, tot_dias);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
-            for(int j = 0; j < snew->size(); j++)
-                snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
+            for(int j = 0; j < snew.size(); j++)
+                snew.at(j) = sw + beta * (ce.at(j) - sw);
 
-            //fnew = hydrological_routine(snew, tot_dias);
+            fnew = hydrological_routine(snew, tot_dias);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
-                for(int j = 0; j < snew->size(); j++)
-                    snew->at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+                for(int j = 0; j < snew.size(); j++)
+                    snew.at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                //fnew = hydrological_routine(snew, tot_dias);
+                fnew = hydrological_routine(snew, tot_dias);
                 icall++;
             }
-        }
-
-        for(int j = 0; j < snew->size(); j++) {
-            snew->at(j) = 9;
         }
 
         return fnew;

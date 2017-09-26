@@ -35,7 +35,7 @@ private slots:
 
     void sceua();
 
-    float cceua(vector<float> snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn);
+    float cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn);
 
     float hydrological_routine(vector<float> x, float tot_dias);
 
