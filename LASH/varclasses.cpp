@@ -42,25 +42,25 @@ void VarMeteorologicas::loadData1(SubBacia subw, QString filename1, int tot_dias
 }
 void VarMeteorologicas::setVarMet(int dia, int sub_b, SubBacia subw){
 
-    float U_height=2;
+    float U_height = 2;
 
-    this->dia=this->dadosMet[dia-1][0];
-    this->mes=this->dadosMet[dia-1][1];
-    this->ano=this->dadosMet[dia-1][2];
-    this->tempMin=this->dadosMet[dia-1][(4+(sub_b-1))];
-    this->tempMax=this->dadosMet[dia-1][4+(subw.numSub_b*1)+(sub_b-1)]; //[(4+(numSubw*1)+(sub_b-1))]
-    this->Rh=this->dadosMet[dia-1][(4+(subw.numSub_b*2)+(sub_b-1))];
-    this->Rs=this->dadosMet[dia-1][(4+(subw.numSub_b*4)+(sub_b-1))];
-    this->U=this->dadosMet[dia-1][(4+(subw.numSub_b*3)+(sub_b-1))];
-    this->precMedia=this->dadosMet[dia-1][(4+(subw.numSub_b*5)+(sub_b-1))];
-    this->p5=this->dadosMet[dia-1][(4+(subw.numSub_b*6)+(sub_b-1))];
+    this->dia = this->dadosMet[dia-1][0];
+    this->mes = this->dadosMet[dia-1][1];
+    this->ano = this->dadosMet[dia-1][2];
+    this->tempMin = this->dadosMet[dia-1][(4+(sub_b-1))];
+    this->tempMax = this->dadosMet[dia-1][4+(subw.numSub_b*1)+(sub_b-1)]; //[(4+(numSubw*1)+(sub_b-1))]
+    this->Rh = this->dadosMet[dia-1][(4+(subw.numSub_b*2)+(sub_b-1))];
+    this->Rs = this->dadosMet[dia-1][(4+(subw.numSub_b*4)+(sub_b-1))];
+    this->U = this->dadosMet[dia-1][(4+(subw.numSub_b*3)+(sub_b-1))];
+    this->precMedia = this->dadosMet[dia-1][(4+(subw.numSub_b*5)+(sub_b-1))];
+    this->p5 = this->dadosMet[dia-1][(4+(subw.numSub_b*6)+(sub_b-1))];
     this->dado_observado = this->dadosMet[dia - 1][304];
 
-    if(U_height!=2){
-        this->U2=this->U*(4.87 / (log((67.8*U_height)-5.42)));
+    if(U_height != 2){
+        this->U2 = this->U*(4.87 / (log((67.8*U_height)-5.42)));
     }
     else{
-        this->U2=this->U;
+        this->U2 = this->U;
     }
 
 }
@@ -137,8 +137,7 @@ void VarEntrada::loadData3(SubBacia subw, QString filename3)
     fstream fp;
     fp.open(nome_arquivo3, std::ios::in);
 
-    if(fp.is_open() && fp.good())
-    {
+    if(fp.is_open() && fp.good()) {
         for(i=0; i<lin; i++){//percorre as linhas da matriz
             for(j=0; j<col; j++){//percorre as colunas da matriz
                 fp >> this->dadosEntrada[i][j];
@@ -159,12 +158,16 @@ void VarEntrada::setVarEntrada(int sub_b, float h_sistrad)
     this->latitude=this->dadosEntrada[sub_b][6];
     this->Asubw=this->dadosEntrada[sub_b][7];
 
-    if(h_sistrad>this->h_balhid){
-         this->h_balhid=this->dadosEntrada[sub_b][1];
+    if(h_sistrad > this->h_balhid){
+         this->h_balhid = this->dadosEntrada[sub_b][1];
     }
     else{
-        this->h_balhid=h_sistrad;
+        this->h_balhid = h_sistrad;
     }
+/*
+
+    cout << this->h_balhid << ", " << this->altitude << ", " << this->Upmp << ", " << this->Usaturacao << ", " << this->Tc << ", " << this->latitude << ", " << this->Asubw << endl;
+    cout << "===============================================================\n";*/
 
 }
 //====================================================
@@ -744,12 +747,23 @@ void VarESS::setAll(int dia, int sub_b, float Kss, float Css, VarSolo solo, VarD
     else{
         this->vol_inic_ESS=anterior.Vfinal_ESS[sub_b];
     }
+
     this->vol_ger_ESS = this->vol_inic_ESS + (this->lam_ESS*objentrada.Asubw*1000);
     this->vazao_ESS = this->vol_ger_ESS / (Css * objentrada.Tc * 60);
     this->vol_final_ESS = this->vol_ger_ESS-(this->vazao_ESS*1440*60);
+
     if(this->vol_final_ESS<0){
         this->vol_final_ESS=0;
     }
+
+    cout << "AT " << solo.at << endl;
+    cout << "ACC " << solo.acc << endl;
+    cout << "AM " << solo.am << endl;
+    cout << "lam ESS " << this->lam_ESS<< endl;
+    cout << "vol ini " << this->vol_inic_ESS << endl;
+    cout << "vol ger " << this->vol_ger_ESS << endl;
+    cout << "vazao " << this->vazao_ESS << endl;
+    cout << "==============================================\n";
 }
 
 //==========================================================

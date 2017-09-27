@@ -28,9 +28,9 @@ using namespace std;
     void MainWindow::on_first_ok_clicked()
     {
         //QString filename1=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
+        //QString filename1 = "/home/hidrica/Lash/Planilhas/Dados_Pelotas.txt";
 
-        QString filename1 = "/home/hidrica/Lash/Planilhas/Dados_Pelotas.txt";
-        //QString filename1 = "/home/leonardo/Projetos/Hídrica/Lash/LASH/Planilhas/Dados_Pelotas.txt";
+        QString filename1 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Dados_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->first_file->setText(filename1);
@@ -45,8 +45,9 @@ using namespace std;
     void MainWindow::on_second_ok_clicked()
     {
         //QString filename2=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
-        QString filename2 = "/home/hidrica/Lash/Planilhas/Uso_Solo_Pelotas.txt";
-        //QString filename2 = "/home/leonardo/Projetos/Hídrica/Lash/LASH/Planilhas/Uso_Solo_Pelotas.txt";
+        //QString filename2 = "/home/hidrica/Lash/Planilhas/Uso_Solo_Pelotas.txt";
+
+        QString filename2 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Uso_Solo_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->second_file->setText(filename2);
@@ -60,8 +61,9 @@ using namespace std;
     void MainWindow::on_third_ok_clicked()
     {
         //QString filename3=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
-        QString filename3 = "/home/hidrica/Lash/Planilhas/Mapas_Pelotas.txt";
-        //QString filename3 = "/home/leonardo/Projetos/Hídrica/Lash/LASH/Planilhas/Mapas_Pelotas.txt";
+        //QString filename3 = "/home/hidrica/Lash/Planilhas/Mapas_Pelotas.txt";
+
+        QString filename3 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Mapas_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->third_file->setText(filename3);
@@ -194,17 +196,21 @@ using namespace std;
         int nloop = 0;
         icall = 0;
 
-        /* código real
-        for(int i = 0; i < npt; i++) {
+        xf.push_back(hydrological_routine(x.at(0), tot_dias));
+        icall++;
+        cout << "RMSE: " << xf.at(0) << endl;
+
+        // código real
+       /* for(int i = 0; i < npt; i++) {
             xf.push_back(hydrological_routine(x.at(i), tot_dias));
             icall++;
-
-            cout << i + 1 << " " << x.at(i).at(0) << " " << x.at(i).at(1) << " " << x.at(i).at(2) << " " << x.at(i).at(3) << " " << x.at(i).at(4) << " " << x.at(i).at(5) << " " << x.at(i).at(6) << " " << xf.at(i) << endl;
+            cout << "RMSE: " << xf.at(i) << endl;
+            //cout << i + 1 << " " << x.at(i).at(0) << " " << x.at(i).at(1) << " " << x.at(i).at(2) << " " << x.at(i).at(3) << " " << x.at(i).at(4) << " " << x.at(i).at(5) << " " << x.at(i).at(6) << " " << xf.at(i) << endl;
         }
-        */
+
 
         //código para fins acadêmicos
-        xf.push_back(1.48814);
+       /* xf.push_back(1.48814);
         xf.push_back(1.48627);
         xf.push_back(1.70392);
         xf.push_back(1.56368);
@@ -278,10 +284,10 @@ using namespace std;
         xf.push_back(1.49267);
         xf.push_back(3.9123); //fake
         xf.push_back(2.8526);
-        xf.push_back(1.71648);
+        xf.push_back(1.71648);*/
         //fim do código para fins acadêmicos
 
-        vector<pair<float, vector<float>>> xf_to_f;
+/*        vector<pair<float, vector<float>>> xf_to_f;
 
         //liga x com xf
         for(int i = 0; i < npt; i++)
@@ -324,8 +330,6 @@ using namespace std;
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
                     int k2 = k1 * ngs + igs;
 
-                    cout << "k1 " << k1 << ", k2 " << k2 << endl;
-
                     cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
                     cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
                 }
@@ -366,7 +370,7 @@ using namespace std;
                                 break;
                             }
                         } */
-                    }
+       /*             }
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
 
@@ -382,15 +386,17 @@ using namespace std;
 
                     //chamar cceua (corrigir a chamada)
                     float cce = cceua(&snew, s, sf, bl, bu, tot_dias, icall, maxn);
-
+                    cout << "fnew: " << cce << endl;
                     //testar a partir daqui, pode conter erros;
-                 /*   s.at(nps - 1) = snew;
+                    s.at(nps - 1) = snew;
                     sf.at(nps - 1) = cce;
+
+
 
                     for(int j = 0; j < nps; j++) {  //põe o simplex no complex
                         cx.at(lcs.at(j)) = s.at(j);
                         cf.at(lcs.at(j)) = sf.at(j); 
-                    }*/
+                    }
                 }
 
                 //põe o complex na população
@@ -400,7 +406,7 @@ using namespace std;
 
             }
             caux++;
-        }
+        }*/
     }
 
     float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn) {
@@ -445,31 +451,30 @@ using namespace std;
                 snew->at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
         }
 
-        float fnew = 4; //hydrological_routine(snew, tot_dias);
+        float fnew;
+        cout << "Chama rotina (1° vez)." << endl;
+        fnew = hydrological_routine(*snew, tot_dias);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
             for(int j = 0; j < snew->size(); j++)
                 snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
-            //fnew = hydrological_routine(snew, tot_dias);
+            cout << "Chama rotina (2° vez)." << endl;
+            fnew = hydrological_routine(*snew, tot_dias);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
                 for(int j = 0; j < snew->size(); j++)
-                    snew->at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+                    snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                //fnew = hydrological_routine(snew, tot_dias);
+                cout << "Chama rotina (3° vez)." << endl;
+                fnew = hydrological_routine(*snew, tot_dias);
                 icall++;
             }
         }
 
-        for(int j = 0; j < snew->size(); j++) {
-            snew->at(j) = 9;
-        }
-
         return fnew;
-
     }
 
 
@@ -486,7 +491,7 @@ using namespace std;
         Cb = x.at(5);
         Coef_Ia = x.at(6);
 
-        //cout << dia << " " << kcr << " " << Kb << " " << Kss << " " << Cs << " " << Css << " " << Cb << " " << Coef_Ia << " ";
+        //cout << dia << " " << kcr << " " << Kb << " " << Kss << " " << Cs << " " << Css << " " << Cb << " " << Coef_Ia << " " << endl;
 
         // float p5tst;
         float h_sistrad2;
@@ -664,6 +669,7 @@ using namespace std;
         float dif_valores = 0;
 
         for(i=0; i<tot_dias; i++){
+            cout << "DIA " << i << endl;
             float vazao_diaria = 0;
             dia=i+1;
 
@@ -682,6 +688,7 @@ using namespace std;
             fileVEB << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;    */
 
             for(j=0; j<(subw.numSub_b); j++){
+                cout << "J " << j << endl;
                 float vazao_sub = 0;
                 sub_b=j;
                 //Busca na matriz as váriaveis do arquivo de entrada.
@@ -797,6 +804,7 @@ using namespace std;
                 //SETA TODOS OS ATRIBUTOS DA CLASSE EB
 
                 EB.setAll(dia, sub_b, Kb, Cb, solo, anterior, entrada);
+
 
 
                 //Seta a variável "vazao_total".
