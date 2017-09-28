@@ -57,7 +57,7 @@ void VarMeteorologicas::setVarMet(int dia, int sub_b, SubBacia subw){
     this->dado_observado = this->dadosMet[dia - 1][304];
 
     if(U_height != 2){
-        this->U2 = this->U*(4.87 / (log((67.8*U_height)-5.42)));
+        this->U2 = this->U * (4.87 / (log((67.8*U_height)-5.42)));
     }
     else{
         this->U2 = this->U;
