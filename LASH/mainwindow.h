@@ -18,6 +18,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    int icall;
+    vector<float> vazao;
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -35,7 +37,7 @@ private slots:
 
     void sceua();
 
-    float cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn);
+    float cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias);
 
     float hydrological_routine(vector<float> x, float tot_dias);
 

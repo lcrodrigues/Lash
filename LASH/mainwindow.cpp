@@ -30,7 +30,7 @@ using namespace std;
         //QString filename1=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename1 = "/home/hidrica/Lash/Planilhas/Dados_Pelotas.txt";
 
-        QString filename1 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Dados_Pelotas.txt";
+        QString filename1 = "C:/Users/Cliente/Desktop/Lash/Planilhas/Dados_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->first_file->setText(filename1);
@@ -47,7 +47,7 @@ using namespace std;
         //QString filename2=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename2 = "/home/hidrica/Lash/Planilhas/Uso_Solo_Pelotas.txt";
 
-        QString filename2 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Uso_Solo_Pelotas.txt";
+        QString filename2 = "C:/Users/Cliente/Desktop/Lash/Planilhas/Uso_Solo_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->second_file->setText(filename2);
@@ -63,7 +63,7 @@ using namespace std;
         //QString filename3=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename3 = "/home/hidrica/Lash/Planilhas/Mapas_Pelotas.txt";
 
-        QString filename3 = "C:\\Users\\Cliente\\Desktop\\Lash\\Planilhas\\Mapas_Pelotas.txt";
+        QString filename3 = "C:/Users/Cliente/Desktop/Lash/Planilhas/Mapas_Pelotas.txt";
 
         //QMessageBox::information(this, tr("Done!"), filename);
         ui->third_file->setText(filename3);
@@ -76,10 +76,9 @@ using namespace std;
 
     void MainWindow::sceua() {
 
-        int peps;
+        icall = 0;
         int ngs = 5;
         int iniflg = 0;
-        float iseed;
 
         vector<float> x0;
 
@@ -153,22 +152,19 @@ using namespace std;
             x0.push_back(ui->lineEdit_coef->text().toFloat(NULL));*/
 
         //Initialize SCE parameters:
-        int ngs1, ngs2;
 
         int nopt = x0.size();
         int npg = 2 * nopt + 1;
         int nps = nopt + 1;
         int nspl = npg;
-        int mings = ngs;
         int npt = npg * ngs;
-        int k1, k2, icall;
-        float f0, bestf, worstf, xnstd, criter_change, tot_dias;
+        float bestf, worstf, tot_dias;
         tot_dias = ui->num_dias->text().toInt(NULL);
 
         vector<float> bound, xx, criter, cf, bestx, worstx, xf;
         vector<vector<float>> cx, result;
 
-        for(int i = 0; i < bu.size(); i++)
+        for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
 
         vector<vector<float>> x;
@@ -189,28 +185,20 @@ using namespace std;
         }
 
         if (iniflg == 1) {
-            for(int i = 0; i < x.at(0).size(); i++)
+            for(uint i = 0; i < x.at(0).size(); i++)
                 x.at(0).at(i) = x0.at(i);
         }
 
-        int nloop = 0;
-        icall = 0;
-
-        xf.push_back(hydrological_routine(x.at(0), tot_dias));
-        icall++;
-        cout << "RMSE: " << xf.at(0) << endl;
-
         // código real
-       /* for(int i = 0; i < npt; i++) {
+    /*    for(int i = 0; i < npt; i++) {
             xf.push_back(hydrological_routine(x.at(i), tot_dias));
             icall++;
             cout << "RMSE: " << xf.at(i) << endl;
-            //cout << i + 1 << " " << x.at(i).at(0) << " " << x.at(i).at(1) << " " << x.at(i).at(2) << " " << x.at(i).at(3) << " " << x.at(i).at(4) << " " << x.at(i).at(5) << " " << x.at(i).at(6) << " " << xf.at(i) << endl;
-        }
+        }   */
 
 
         //código para fins acadêmicos
-       /* xf.push_back(1.48814);
+        xf.push_back(1.48814);
         xf.push_back(1.48627);
         xf.push_back(1.70392);
         xf.push_back(1.56368);
@@ -284,10 +272,10 @@ using namespace std;
         xf.push_back(1.49267);
         xf.push_back(3.9123); //fake
         xf.push_back(2.8526);
-        xf.push_back(1.71648);*/
+        xf.push_back(1.71648);
         //fim do código para fins acadêmicos
 
-/*        vector<pair<float, vector<float>>> xf_to_f;
+        vector<pair<float, vector<float>>> xf_to_f;
 
         //liga x com xf
         for(int i = 0; i < npt; i++)
@@ -311,18 +299,22 @@ using namespace std;
         cout << "The initial loop: 0" << endl;
         cout << "BESTF: " << bestf << endl;
         cout << "BESTX: ";
-        for(int i = 0; i < bestx.size(); i++)
+        for(uint i = 0; i < bestx.size(); i++)
             cout << bestx.at(i) << " ";
         cout << "\nWORSTF: " << worstf << endl;
         cout << "WORSTX: ";
-        for(int i = 0; i < worstx.size(); i++)
+        for(uint i = 0; i < worstx.size(); i++)
             cout << worstx.at(i) << " ";
         cout << endl;
 
         int caux = 0;
+        int nloop = 0;
 
+        cout << "Entra em while(maxn)\n";
         //laço real -> while(icall < maxn) { //loop contando iterações
         while(caux < 1) {
+            nloop++;
+            cout << "For de 0 a 5\n";
             for(int igs = 0; igs < ngs; igs++) {    //0 a 5
                 vector<vector<float>> cx(npg, vector<float>(nopt));
                 vector<float> cf(npg);
@@ -333,19 +325,19 @@ using namespace std;
                     cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
                     cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
                 }
+                cout << "Embaralhou intervalo " << igs + 1 << endl;
             
-
+                cout << "Entra em loop de 0 a 15\n";
                 for(int i = 0; i < nspl; i++) { //0 a 15
                     vector<int> lcs(8);
                     lcs.at(0) = 0;
 
                     int size = 14;
                     vector<int> aux_p(size);
-                    for(int l = 0; l < aux_p.size(); l++)
+                    for(uint l = 0; l < aux_p.size(); l++)
                         aux_p.at(l) = l + 1;
 
                     for(int j = 1; j < nps; j++) {
-                        bool auxb = true; //bool auxiliar pra posição
 
                         int r = rand() % size;
                         size--;
@@ -370,9 +362,12 @@ using namespace std;
                                 break;
                             }
                         } */
-       /*             }
+                    }
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
+                    for(uint pl = 0; pl < lcs.size(); pl++)
+                        cout << lcs.at(pl) << " ";
+                    cout << endl;
 
                     vector<vector<float>> s(nps, vector<float>(nopt));
                     vector<float> snew;
@@ -384,44 +379,72 @@ using namespace std;
                         sf.at(j) = cf.at(lcs.at(j)); //palpite também
                      }
 
-                    //chamar cceua (corrigir a chamada)
-                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias, icall, maxn);
+                    //chamar cceua
+                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
                     cout << "fnew: " << cce << endl;
-                    //testar a partir daqui, pode conter erros;
+
                     s.at(nps - 1) = snew;
                     sf.at(nps - 1) = cce;
 
-
-
-                    for(int j = 0; j < nps; j++) {  //põe o simplex no complex
+                    //põe o simplex no complex
+                    for(int j = 0; j < nps; j++) {
                         cx.at(lcs.at(j)) = s.at(j);
                         cf.at(lcs.at(j)) = sf.at(j); 
                     }
                 }
 
                 //põe o complex na população
-            //    x_ordered.at(k2) = cx.at(k1);
-             //   xf.at(k2) = cf.at(k1);
+                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+                    int k2 = k1 * ngs + igs;
 
-
+                    x_ordered.at(k2) = cx.at(k1);
+                    xf.at(k2) = cf.at(k1);
+                }
             }
+
+            //ordena x de acordo com xf
+            vector<pair<float, vector<float>>> new_xf_to_f;
+            for(uint j = 0; j < xf.size(); j++)
+                new_xf_to_f.push_back(make_pair(xf.at(j), x_ordered.at(j)));
+
+            sort(new_xf_to_f.begin(), new_xf_to_f.end());
+            for(int j = 0; j < npt; j++)
+                x_ordered.at(j) = new_xf_to_f.at(j).second;
+
+            //melhor x e xf
+            bestx = x_ordered.at(0);
+            bestf = new_xf_to_f.at(0).first;
+
+            //pior x e xf
+            worstx = x_ordered.at(npt - 1);
+            worstf = new_xf_to_f.at(npt - 1).first;
+
+            cout << "Evolution loop: " << nloop << " - Trial - " << icall << endl;
+            cout << "BESTF: " << bestf << endl;
+            cout << "BESTX: ";
+            for(uint i = 0; i < bestx.size(); i++)
+                cout << bestx.at(i) << " ";
+            cout << "\nWORSTF: " << worstf << endl;
+            cout << "WORSTX: ";
+            for(uint i = 0; i < worstx.size(); i++)
+                cout << worstx.at(i) << " ";
+            cout << endl;
             caux++;
-        }*/
+        }
     }
 
-    float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias, int icall, int maxn) {
+    float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
         vector<float> sb = s.at(0); //sb melhor s
         vector<float> sw = s.at(6); //sw pior s
 
-        float fb = sf.at(0);   //fb melhor sf
         float fw = sf.at(sf.size() - 1);    //fw pior sf
         float alpha = 1.0, beta = 0.5;
 
         vector<float> ce;
-        for(int j = 0; j < sf.size() - 1; j++) { //até 8 - 1
+        for(uint j = 0; j < sf.size() - 1; j++) { //até 8 - 1
             float sum = 0;
 
-            for(int k = 0; k < s.at(0).size(); k++) //até 7
+            for(uint k = 0; k < s.at(0).size(); k++) //até 7
                 sum += s.at(j).at(k);
 
             float media = sum / (7 - 1); //media da linha de s, excluindo o pior ponto
@@ -432,10 +455,8 @@ using namespace std;
             snew->push_back(svalue);
         }
 
-
         bool ibound = false;
-
-        for(int j = 0; j < snew->size(); j++) { //verifica os limites
+        for(uint j = 0; j < snew->size(); j++) { //verifica os limites
             float s1, s2;
             s1 = snew->at(j) - bl.at(j);
             s2 = bu.at(j) - snew->at(j);
@@ -447,28 +468,28 @@ using namespace std;
         }
 
         if(ibound) {   //recalcula caso fora de limites
-            for(int j = 0; j < snew->size(); j++)
-                snew->at(j) = bl.at(j) + ((1 + (static_cast <int> (rand()) % static_cast <int>(7 - 1))) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+            for(uint j = 0; j < snew->size(); j++)
+                snew->at(j) = bl.at(j) + ((1 + (rand() % 7 + 1)) * (bu.at(j) - bl.at(j)));  //7 -> nopt
         }
 
         float fnew;
-        cout << "Chama rotina (1° vez)." << endl;
+        cout << "HR reflection" << endl;
         fnew = hydrological_routine(*snew, tot_dias);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
-            for(int j = 0; j < snew->size(); j++)
+            for(uint j = 0; j < snew->size(); j++)
                 snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
-            cout << "Chama rotina (2° vez)." << endl;
+            cout << "HR contraction (reflection failed)" << endl;
             fnew = hydrological_routine(*snew, tot_dias);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
-                for(int j = 0; j < snew->size(); j++)
+                for(uint j = 0; j < snew->size(); j++)
                     snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                cout << "Chama rotina (3° vez)." << endl;
+                cout << "HR random (reflection and contraction failed)" << endl;
                 fnew = hydrological_routine(*snew, tot_dias);
                 icall++;
             }
@@ -490,8 +511,6 @@ using namespace std;
         Css = x.at(4);
         Cb = x.at(5);
         Coef_Ia = x.at(6);
-
-        //cout << dia << " " << kcr << " " << Kb << " " << Kss << " " << Cs << " " << Css << " " << Cb << " " << Coef_Ia << " " << endl;
 
         // float p5tst;
         float h_sistrad2;
@@ -669,7 +688,6 @@ using namespace std;
         float dif_valores = 0;
 
         for(i=0; i<tot_dias; i++){
-            cout << "DIA " << i << endl;
             float vazao_diaria = 0;
             dia=i+1;
 
@@ -688,7 +706,6 @@ using namespace std;
             fileVEB << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;    */
 
             for(j=0; j<(subw.numSub_b); j++){
-                cout << "J " << j << endl;
                 float vazao_sub = 0;
                 sub_b=j;
                 //Busca na matriz as váriaveis do arquivo de entrada.
@@ -806,7 +823,6 @@ using namespace std;
                 EB.setAll(dia, sub_b, Kb, Cb, solo, anterior, entrada);
 
 
-
                 //Seta a variável "vazao_total".
                 vazao_sub = ESD.vazao_ESD + ESS.vazao_ESS + EB.vazao_EB;
                 vazao_diaria += vazao_sub;
@@ -917,9 +933,8 @@ using namespace std;
             vazao_total.push_back(vazao_diaria);
         }
 
-        if(flag) {
+        if(flag)
              rmse = sqrt(dif_valores/total_dias_observados);
-        }
 
         //Depois de terminar a execução ele abre a segunda tela para mostrar os resultados.
         //second = new SecondWindow(this); //secondwindow é a classe; second é o ponteiro declarado antes;

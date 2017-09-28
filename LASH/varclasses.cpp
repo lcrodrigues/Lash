@@ -755,15 +755,6 @@ void VarESS::setAll(int dia, int sub_b, float Kss, float Css, VarSolo solo, VarD
     if(this->vol_final_ESS<0){
         this->vol_final_ESS=0;
     }
-
-    cout << "AT " << solo.at << endl;
-    cout << "ACC " << solo.acc << endl;
-    cout << "AM " << solo.am << endl;
-    cout << "lam ESS " << this->lam_ESS<< endl;
-    cout << "vol ini " << this->vol_inic_ESS << endl;
-    cout << "vol ger " << this->vol_ger_ESS << endl;
-    cout << "vazao " << this->vazao_ESS << endl;
-    cout << "==============================================\n";
 }
 
 //==========================================================
@@ -923,25 +914,3 @@ void SubBacia::setNumSub_b(QString filename)
     this->numSub_b=count;
     fp.close();
 }
-
-/*
-void SCE_UA::sceua_routine(vector<float> x0, vector<float> bu, vector<float> bl, int maxn,
-                                              int peps, int ngs, float iseed, int iniflg) {
-
-
-
-
-
-
-
-
-
-}   */
-
-void CCE_UA::cceua_routine(vector< vector<float> > s, vector<float> sf, vector<float> bu, vector<float> bl, int icall, int maxn) {
-
-    vector< vector<float> > result;
-    this->result = result;
-}
-
-
