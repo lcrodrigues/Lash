@@ -6,12 +6,20 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QMainWindow>
+#include <QtCharts/QChartView>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QCategoryAxis>
+
 #include "results.h"
 #include "secondwindow.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "varclasses.h"
 
+QT_CHARTS_USE_NAMESPACE
 using namespace std;
     
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -161,8 +169,7 @@ using namespace std;
         float bestf, worstf, tot_dias;
         tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, xx, criter, cf, bestx, worstx, xf;
-        vector<vector<float>> cx, result;
+        vector<float> bound, bestx, worstx, xf;
 
         for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
@@ -191,7 +198,7 @@ using namespace std;
 
         // código real
     /*    for(int i = 0; i < npt; i++) {
-            xf.push_back(hydrological_routine(x.at(i), tot_dias));
+            xf.push_back(hydrological_routine(x.at(i), tot_dias, false));
             icall++;
             cout << "RMSE: " << xf.at(i) << endl;
         }   */
@@ -295,6 +302,38 @@ using namespace std;
         worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
         worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
 
+        hydrological_routine(bestx, tot_dias, true);
+
+
+        //gerar gráfico
+        QChart *chart = new QChart();
+        chart->legend()->hide();
+        chart->setTitle("Vazão do conjunto de parâmetros.\n");
+
+        QValueAxis *axisX = new QValueAxis;
+        axisX->setTickCount(tot_dias);
+        chart->addAxis(axisX, Qt::AlignBottom);
+
+        QLineSeries *c_series = new QLineSeries;
+        QLineSeries *o_series = new QLineSeries;
+        for(uint i = 0; i < vazao_calculada.size(); i++) {
+            c_series->append(i + 1, vazao_calculada.at(i));
+
+            if(vazao_observada.at(i) != -9999)
+                o_series->append(i + 1, vazao_observada.at(i));
+        }
+        chart->addSeries(c_series);
+        chart->addSeries(o_series);
+
+        QChartView *chartView = new QChartView(chart);
+        chartView->setRenderHint(QPainter::Antialiasing);
+
+        QMainWindow window;
+        window.setCentralWidget(chartView);
+        window.resize(800, 600);
+        window.show();
+
+/*
         //exibir dados
         cout << "The initial loop: 0" << endl;
         cout << "BESTF: " << bestf << endl;
@@ -362,7 +401,7 @@ using namespace std;
                                 break;
                             }
                         } */
-                    }
+       /*             }
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
                     for(uint pl = 0; pl < lcs.size(); pl++)
@@ -430,7 +469,7 @@ using namespace std;
                 cout << worstx.at(i) << " ";
             cout << endl;
             caux++;
-        }
+        }   */
     }
 
     float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
@@ -474,7 +513,7 @@ using namespace std;
 
         float fnew;
         cout << "HR reflection" << endl;
-        fnew = hydrological_routine(*snew, tot_dias);
+        fnew = hydrological_routine(*snew, tot_dias, false);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
@@ -482,7 +521,7 @@ using namespace std;
                 snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
             cout << "HR contraction (reflection failed)" << endl;
-            fnew = hydrological_routine(*snew, tot_dias);
+            fnew = hydrological_routine(*snew, tot_dias, false);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
@@ -490,7 +529,7 @@ using namespace std;
                     snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
                 cout << "HR random (reflection and contraction failed)" << endl;
-                fnew = hydrological_routine(*snew, tot_dias);
+                fnew = hydrological_routine(*snew, tot_dias, false);
                 icall++;
             }
         }
@@ -499,7 +538,7 @@ using namespace std;
     }
 
 
-    float MainWindow::hydrological_routine(vector<float> x, float tot_dias) {
+    float MainWindow::hydrological_routine(vector<float> x, float tot_dias, bool best_p) {
         int i, j, dia, sub_b=0;
         float kcr, Kb, Kss, Cs, Css, Cb, Coef_Ia, evap_lamina, rmse = 0;
         bool flag = false;
@@ -928,9 +967,13 @@ using namespace std;
                 flag = true;
             }
 
-            //cout << "\nVazão para o dia " << i + 1 << ": " << vazao_diaria << endl << endl;
+            if(best_p) {
+                vazao_observada.push_back(met.dado_observado);
+                vazao_calculada.push_back(vazao_diaria);
+            }
 
             vazao_total.push_back(vazao_diaria);
+
         }
 
         if(flag)
