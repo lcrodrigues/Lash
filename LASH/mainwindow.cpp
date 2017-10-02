@@ -21,10 +21,13 @@
 
 QT_CHARTS_USE_NAMESPACE
 using namespace std;
+using namespace QtCharts;
     
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
     {
         ui->setupUi(this);
+
+
     }
     
     MainWindow::~MainWindow()
@@ -47,7 +50,7 @@ using namespace std;
         arquivo1 = ui->first_file->text();
         objmet.file1_name=arquivo1;
         QMessageBox::information(this, "OK!", objmet.file1_name);*/
-    
+
     }
     
     void MainWindow::on_second_ok_clicked()
@@ -197,13 +200,13 @@ using namespace std;
         }
 
         // código real
-    /*    for(int i = 0; i < npt; i++) {
+        for(int i = 0; i < npt; i++) {
             xf.push_back(hydrological_routine(x.at(i), tot_dias, false));
             icall++;
             cout << "RMSE: " << xf.at(i) << endl;
-        }   */
+        }
 
-
+    /*
         //código para fins acadêmicos
         xf.push_back(1.48814);
         xf.push_back(1.48627);
@@ -280,7 +283,7 @@ using namespace std;
         xf.push_back(3.9123); //fake
         xf.push_back(2.8526);
         xf.push_back(1.71648);
-        //fim do código para fins acadêmicos
+        //fim do código para fins acadêmicos    */
 
         vector<pair<float, vector<float>>> xf_to_f;
 
@@ -302,38 +305,46 @@ using namespace std;
         worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
         worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
 
+        //gerar gráfico
+        /*
         hydrological_routine(bestx, tot_dias, true);
 
-
-        //gerar gráfico
         QChart *chart = new QChart();
         chart->legend()->hide();
-        chart->setTitle("Vazão do conjunto de parâmetros.\n");
+        chart->setTitle("Valores observados e calculados");
 
         QValueAxis *axisX = new QValueAxis;
-        axisX->setTickCount(tot_dias);
         chart->addAxis(axisX, Qt::AlignBottom);
 
-        QLineSeries *c_series = new QLineSeries;
-        QLineSeries *o_series = new QLineSeries;
-        for(uint i = 0; i < vazao_calculada.size(); i++) {
-            c_series->append(i + 1, vazao_calculada.at(i));
+        QLineSeries *series = new QLineSeries;
+        for(uint i = 0; i < vazao_calculada.size(); i++)
+                    series->append(i + 1, vazao_calculada.at(i));
+        chart->addSeries(series);
 
+        QValueAxis *axisY = new QValueAxis;
+        axisY->setLinePenColor(series->pen().color());
+
+        chart->addAxis(axisY, Qt::AlignLeft);
+        series->attachAxis(axisX);
+        series->attachAxis(axisY);
+
+        series = new QLineSeries;
+        for(uint i = 0; i < vazao_observada.size(); i++) {
             if(vazao_observada.at(i) != -9999)
-                o_series->append(i + 1, vazao_observada.at(i));
+                series->append(i + 1, vazao_observada.at(i));
         }
-        chart->addSeries(c_series);
-        chart->addSeries(o_series);
+        chart->addSeries(series);
+
+        series->attachAxis(axisX);
 
         QChartView *chartView = new QChartView(chart);
         chartView->setRenderHint(QPainter::Antialiasing);
 
-        QMainWindow window;
-        window.setCentralWidget(chartView);
-        window.resize(800, 600);
-        window.show();
+        second = new SecondWindow(this);
+        second->setCentralWidget(chartView);
+        second->show(); */
 
-/*
+
         //exibir dados
         cout << "The initial loop: 0" << endl;
         cout << "BESTF: " << bestf << endl;
@@ -346,12 +357,12 @@ using namespace std;
             cout << worstx.at(i) << " ";
         cout << endl;
 
-        int caux = 0;
         int nloop = 0;
+        int size_m = 0;
 
         cout << "Entra em while(maxn)\n";
-        //laço real -> while(icall < maxn) { //loop contando iterações
-        while(caux < 1) {
+        while(icall < maxn) { //loop contando iterações
+            cout << "ICALL: " << icall << endl;
             nloop++;
             cout << "For de 0 a 5\n";
             for(int igs = 0; igs < ngs; igs++) {    //0 a 5
@@ -401,26 +412,23 @@ using namespace std;
                                 break;
                             }
                         } */
-       /*             }
+                    }
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
-                    for(uint pl = 0; pl < lcs.size(); pl++)
-                        cout << lcs.at(pl) << " ";
-                    cout << endl;
 
                     vector<vector<float>> s(nps, vector<float>(nopt));
                     vector<float> snew;
                     vector<float> sf(nps);
 
                     for(int j = 0; j < nps; j++) {
-                        //s.at(j) = cx.at(lcs);
-                        s.at(j) = cx.at(lcs.at(j));  //palpite, s recebe partes aleatórias de cx
-                        sf.at(j) = cf.at(lcs.at(j)); //palpite também
+                        s.at(j) = cx.at(lcs.at(j));
+                        sf.at(j) = cf.at(lcs.at(j));
                      }
 
                     //chamar cceua
+                    cout << "chamando cceua\n";
                     float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
-                    cout << "fnew: " << cce << endl;
+                    cout << "fim do cceua\n";
 
                     s.at(nps - 1) = snew;
                     sf.at(nps - 1) = cce;
@@ -468,8 +476,32 @@ using namespace std;
             for(uint i = 0; i < worstx.size(); i++)
                 cout << worstx.at(i) << " ";
             cout << endl;
-            caux++;
-        }   */
+
+            vector<vector<float>> f_matrix(npt, vector<float>(nopt + 1));
+            for(int j = 0; j < npt; j++) {
+                f_matrix.at(j).push_back(j + 1);
+
+                for(int k = 0; k < nopt; k++)
+                    f_matrix.at(j).push_back(new_xf_to_f.at(j).second.at(k));
+
+                f_matrix.at(j).push_back(new_xf_to_f.at(j).first);
+            }
+
+            matrices.push_back(f_matrix);
+            size_m++;
+        }
+
+        cout << "\n---------------------------------------------------\n\n";
+
+        for(int i = 0; i < size_m; i++) {
+            for(int j = 0; j < npt; j++) {
+                for(int k = 0; k < nopt; k++) {
+                    cout << matrices.at(i).at(j).at(k) << " ";
+                }
+                cout << endl;
+            }
+            cout << "\n---------------------------------------------------\n\n";
+        }
     }
 
     float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {

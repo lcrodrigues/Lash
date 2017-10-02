@@ -21,6 +21,7 @@ public:
     int icall;
     vector<float> vazao_calculada;
     vector<float> vazao_observada;
+    vector<vector<vector<float>>> matrices;
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
