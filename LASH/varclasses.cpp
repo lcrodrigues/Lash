@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <time.h>
 #include "varclasses.h"
 #include<QTextStream>
 #include <stdio.h>
@@ -38,7 +39,6 @@ void VarMeteorologicas::loadData1(SubBacia subw, QString filename1, int tot_dias
         }
     }
     fp.close();
-
 }
 void VarMeteorologicas::setVarMet(int dia, int sub_b, SubBacia subw){
 
@@ -68,11 +68,11 @@ void VarMeteorologicas::setU2()
 {
     float U_height=2;
     if(U_height!=2){
-                this->U2=this->U*(4.87 / (log((67.8*U_height)-5.42)));
-            }
-            else{
-                this->U2=this->U;
-            }
+        this->U2=this->U*(4.87 / (log((67.8*U_height)-5.42)));
+    }
+    else {
+        this->U2=this->U;
+    }
 }
 //====================================================
 
@@ -105,7 +105,6 @@ void VarUsoDoSolo::loadData2(SubBacia subw, QString filename2, int tot_dias)
         }
     }
     fp.close();
-
 }
 void VarUsoDoSolo::setVarUS(int dia, int sub_b, SubBacia subw)
 {
@@ -145,7 +144,6 @@ void VarEntrada::loadData3(SubBacia subw, QString filename3)
         }
     }
     fp.close();
-
 }
 void VarEntrada::setVarEntrada(int sub_b, float h_sistrad)
 {
@@ -362,6 +360,7 @@ void VarEvapotranspiracao::setAll(int dia, float *evap_l, VarMeteorologicas objm
         this->aero_resist=94/this->U10;
     }
     this->ETc= (0.408*this->ssvpc*(this->rn-G)+((86400*this->pc*e)/(this->tkv*R*this->aero_resist))*(this->es-this->ea))/(this->ssvpc+this->pc*(1+(objusodosolo.stomatal_resistence/this->aero_resist)));
+
     *evap_l = (0.408*this->ssvpc*(this->rn-0)+((86400*this->pc*e)/(this->tkv*R*this->aero_resist))*(this->es-this->ea))/(this->ssvpc+this->pc*(1+(0/this->aero_resist)));
 //break
 }
@@ -856,10 +855,10 @@ void VarDiaAnterior::SetPts(int pos, float valor){
     this->Pts[pos][0]=valor;
 }
 void VarDiaAnterior::SetAm(int pos, float valor){
-    this->Am[pos]=valor;
+    this->Am[pos] = valor;
 }
 void VarDiaAnterior::SetAt(int pos, float valor){
-    this->At[pos]=valor;
+    this->At[pos] = valor;
 }
 void VarDiaAnterior::SetPe(int pos, float valor){
     this->Pe[pos]=valor;
@@ -901,16 +900,14 @@ void SubBacia::setNumSub_b(QString filename)
 
     fp.open(nome_arquivo, std::ios::in);
 
-    if (fp.is_open())
-    {
-        while(fp.get(c)){
-            if(c == '\n'){
+    if(fp.is_open()) {
+        while(fp.get(c)) {
+            if(c == '\n')
                 count++;
-            }
         }
     }
-    else std::cout << "Unable to open file";
+    else cout << "Unable to open file";
 
-    this->numSub_b=count;
+    this->numSub_b = count;
     fp.close();
 }

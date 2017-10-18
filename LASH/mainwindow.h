@@ -18,7 +18,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    int icall;
+    int icall, size_m;
     vector<float> vazao_calculada;
     vector<float> vazao_observada;
     vector<vector<vector<float>>> matrices;
@@ -39,6 +39,8 @@ private slots:
     void on_actionAjuda_triggered();
 
     void sceua();
+
+    pair<int, int> best_parameters(int npt, int nopt);
 
     float cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias);
 

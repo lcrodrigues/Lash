@@ -14,6 +14,9 @@ TEMPLATE = app
 
 QMAKE_CXXFLAGS += -std=c++11
 
+QMAKE_CXXFLAGS+= -fopenmp
+QMAKE_LFLAGS +=  -fopenmp
+
 SOURCES += main.cpp\
         mainwindow.cpp \
     varclasses.cpp \

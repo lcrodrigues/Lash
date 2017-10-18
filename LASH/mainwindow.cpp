@@ -1,11 +1,15 @@
 #include <iostream>
 #include <fstream>
+#include <ctime>
 #include <cmath>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <fstream>
 #include <iomanip>
 #include <map>
+
+#include <omp.h>
+
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMainWindow>
 #include <QtCharts/QChartView>
@@ -36,8 +40,7 @@ using namespace QtCharts;
     }
     
     
-    void MainWindow::on_first_ok_clicked()
-    {
+    void MainWindow::on_first_ok_clicked() {
         //QString filename1=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename1 = "/home/hidrica/Lash/Planilhas/Dados_Pelotas.txt";
 
@@ -53,8 +56,7 @@ using namespace QtCharts;
 
     }
     
-    void MainWindow::on_second_ok_clicked()
-    {
+    void MainWindow::on_second_ok_clicked() {
         //QString filename2=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename2 = "/home/hidrica/Lash/Planilhas/Uso_Solo_Pelotas.txt";
 
@@ -69,8 +71,7 @@ using namespace QtCharts;
         QMessageBox::information(this, "OK!2", objusosolo.file2_name);*/
     }
     
-    void MainWindow::on_third_ok_clicked()
-    {
+    void MainWindow::on_third_ok_clicked() {
         //QString filename3=QFileDialog::getOpenFileName(this, tr("Choose 1st file"), "\\", "All files (*.*);; Text Files (*.txt)");
         //QString filename3 = "/home/hidrica/Lash/Planilhas/Mapas_Pelotas.txt";
 
@@ -169,23 +170,15 @@ using namespace QtCharts;
         int nps = nopt + 1;
         int nspl = npg;
         int npt = npg * ngs;
-        float bestf, worstf, tot_dias;
-        tot_dias = ui->num_dias->text().toInt(NULL);
+        float bestf, worstf;
+        int tot_dias = ui->num_dias->text().toInt(NULL);
 
         vector<float> bound, bestx, worstx, xf;
 
         for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
 
-        vector<vector<float>> x;
-
-        for(int i = 0; i < npt; i++) {
-            vector<float> row;
-            for(int j = 0; j < nopt; j++)
-                row.push_back(0);
-
-            x.push_back(row);
-        }
+        vector<vector<float>> x(npt, vector<float>(nopt));
 
         for(int i = 0; i < npt; i++) {  //inicia x0
             for(int j = 0; j < nopt; j++) {
@@ -200,13 +193,23 @@ using namespace QtCharts;
         }
 
         // código real
+        omp_set_num_threads(omp_get_max_threads());
+        //omp_set_num_threads(2);
+
         for(int i = 0; i < npt; i++) {
-            xf.push_back(hydrological_routine(x.at(i), tot_dias, false));
+
+            cout << "Iniciando loop " << i + 1 << "." << endl;
+            const clock_t begin_time = clock();
+            float r = hydrological_routine(x.at(i), tot_dias, false);
+            cout << "Total: " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << "s\n";
+
+            xf.push_back(r);
+
             icall++;
-            cout << "RMSE: " << xf.at(i) << endl;
+            cout << i + 1 << "\nRMSE: " << xf.at(i) << endl;
         }
 
-    /*
+        /*
         //código para fins acadêmicos
         xf.push_back(1.48814);
         xf.push_back(1.48627);
@@ -305,10 +308,172 @@ using namespace QtCharts;
         worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
         worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
 
-        //gerar gráfico
-        /*
-        hydrological_routine(bestx, tot_dias, true);
+        //exibir dados
+        cout << "The initial loop: 0" << endl;
+        cout << "BESTF: " << bestf << endl;
+        cout << "BESTX: ";
+        for(uint i = 0; i < bestx.size(); i++)
+            cout << bestx.at(i) << " ";
+        cout << "\nWORSTF: " << worstf << endl;
+        cout << "WORSTX: ";
+        for(uint i = 0; i < worstx.size(); i++)
+            cout << worstx.at(i) << " ";
+        cout << endl;
 
+        int nloop = 0;
+        size_m = 0;
+
+        cout << "Entra em while(maxn)\n";
+
+        int icount = 1;
+        int aux = 0;
+
+        while(icall < maxn) { //loop contando iterações
+            //cout << "ICALL: " << icall << endl;
+            nloop++;
+
+            for(int igs = 0; igs < ngs; igs++) {    //0 a 5
+                vector<vector<float>> cx(npg, vector<float>(nopt));
+                vector<float> cf(npg);
+
+                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+                    int k2 = k1 * ngs + igs;
+
+                    cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
+                    cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
+                }
+
+                for(int i = 0; i < nspl; i++) { //0 a 15
+                    vector<int> lcs(8);
+                    lcs.at(0) = 0;
+
+                    int size = 14;
+                    vector<int> aux_p(size);
+                    for(uint l = 0; l < aux_p.size(); l++)
+                        aux_p.at(l) = l + 1;
+
+                    for(int j = 1; j < nps; j++) {
+
+                        int r = rand() % size;
+                        size--;
+
+                        lcs.at(j) = aux_p.at(r);
+                        aux_p.erase(aux_p.begin() + r);
+                    }
+
+                    sort(lcs.begin(), lcs.end());   //ordena lcs
+
+                    vector<vector<float>> s(nps, vector<float>(nopt));
+                    vector<float> snew;
+                    vector<float> sf(nps);
+
+                    for(int j = 0; j < nps; j++) {
+                        s.at(j) = cx.at(lcs.at(j));
+                        sf.at(j) = cf.at(lcs.at(j));
+                    }
+
+                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
+                    //cout << "ICALL " << icall << endl;
+
+                    s.at(nps - 1) = snew;
+                    sf.at(nps - 1) = cce;
+
+                    //põe o simplex no complex
+                    for(int j = 0; j < nps; j++) {
+                        cx.at(lcs.at(j)) = s.at(j);
+                        cf.at(lcs.at(j)) = sf.at(j); 
+                    }
+                }
+
+                //põe o complex na população
+                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+                    int k2 = k1 * ngs + igs;
+
+                    x_ordered.at(k2) = cx.at(k1);
+                    xf.at(k2) = cf.at(k1);
+                }
+            }
+
+
+            //ordena x de acordo com xf
+            vector<pair<float, vector<float>>> new_xf_to_f;
+            for(uint j = 0; j < xf.size(); j++)
+                new_xf_to_f.push_back(make_pair(xf.at(j), x_ordered.at(j)));
+
+            sort(new_xf_to_f.begin(), new_xf_to_f.end());
+            for(int j = 0; j < npt; j++)
+                x_ordered.at(j) = new_xf_to_f.at(j).second;
+
+            //melhor x e xf
+            bestx = x_ordered.at(0);
+            bestf = new_xf_to_f.at(0).first;
+
+            //pior x e xf
+            worstx = x_ordered.at(npt - 1);
+            worstf = new_xf_to_f.at(npt - 1).first;
+
+            cout << "------------MATRIZ FINAL DO WHILE---------------\n";
+            for(int i = 0; i < npt; i++) {
+                for(int j = 0; j < nopt; j++)
+                    cout << x_ordered.at(i).at(j) << " ";
+                cout << endl;
+            }
+            cout << "----------------------------------------------\n\n";
+
+            cout << "Evolution loop: " << nloop << " - Trial - " << icall << endl;
+            cout << "BESTF: " << bestf << endl;
+            cout << "BESTX: ";
+            for(uint i = 0; i < bestx.size(); i++)
+                cout << bestx.at(i) << " ";
+            cout << "\nWORSTF: " << worstf << endl;
+            cout << "WORSTX: ";
+            for(uint i = 0; i < worstx.size(); i++)
+                cout << worstx.at(i) << " ";
+            cout << endl;
+
+            vector<vector<float>> f_matrix(npt, vector<float>(nopt + 2));
+            for(int j = 0; j < npt; j++) {
+
+                f_matrix.at(j).at(0) = icount;
+
+                for(int k = 0; k < nopt; k++)
+                    f_matrix.at(j).at(k + 1) = new_xf_to_f.at(j).second.at(k);
+
+                f_matrix.at(j).at(nopt + 1) = new_xf_to_f.at(j).first;
+                icount++;
+            }
+
+            matrices.push_back(f_matrix);
+            size_m++;
+
+            aux++;
+        }
+
+        cout << "MATRIZES FINAIS:\n---------------------------------------------------\n\n";
+
+        for(int i = 0; i < size_m; i++) {
+            for(int j = 0; j < npt; j++) {
+                for(int k = 0; k < nopt; k++) {
+                    cout << matrices.at(i).at(j).at(k) << " ";
+                }
+                cout << endl;
+            }
+            cout << "\n---------------------------------------------------\n\n";
+        }
+
+        pair<int, int> bp = best_parameters(npt, nopt);
+
+        vector<float> real_bp;
+        for(int i = 0; i < 7; i++)
+            real_bp.push_back(matrices.at(bp.first).at(bp.second).at(i + 1));
+
+        cout << "\n\n\nFIM\n\n\n";
+        for(uint i = 0; i < real_bp.size(); i++)
+            cout << real_bp.at(i) << " ";
+        cout << endl;
+
+        //GRÁFICO
+        hydrological_routine(bestx, tot_dias, true);
         QChart *chart = new QChart();
         chart->legend()->hide();
         chart->setTitle("Valores observados e calculados");
@@ -318,7 +483,7 @@ using namespace QtCharts;
 
         QLineSeries *series = new QLineSeries;
         for(uint i = 0; i < vazao_calculada.size(); i++)
-                    series->append(i + 1, vazao_calculada.at(i));
+            series->append(i + 1, vazao_calculada.at(i));
         chart->addSeries(series);
 
         QValueAxis *axisY = new QValueAxis;
@@ -342,166 +507,25 @@ using namespace QtCharts;
 
         second = new SecondWindow(this);
         second->setCentralWidget(chartView);
-        second->show(); */
+        second->show();
 
+    }
 
-        //exibir dados
-        cout << "The initial loop: 0" << endl;
-        cout << "BESTF: " << bestf << endl;
-        cout << "BESTX: ";
-        for(uint i = 0; i < bestx.size(); i++)
-            cout << bestx.at(i) << " ";
-        cout << "\nWORSTF: " << worstf << endl;
-        cout << "WORSTX: ";
-        for(uint i = 0; i < worstx.size(); i++)
-            cout << worstx.at(i) << " ";
-        cout << endl;
-
-        int nloop = 0;
-        int size_m = 0;
-
-        cout << "Entra em while(maxn)\n";
-        while(icall < maxn) { //loop contando iterações
-            cout << "ICALL: " << icall << endl;
-            nloop++;
-            cout << "For de 0 a 5\n";
-            for(int igs = 0; igs < ngs; igs++) {    //0 a 5
-                vector<vector<float>> cx(npg, vector<float>(nopt));
-                vector<float> cf(npg);
-
-                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
-                    int k2 = k1 * ngs + igs;
-
-                    cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
-                    cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
-                }
-                cout << "Embaralhou intervalo " << igs + 1 << endl;
-            
-                cout << "Entra em loop de 0 a 15\n";
-                for(int i = 0; i < nspl; i++) { //0 a 15
-                    vector<int> lcs(8);
-                    lcs.at(0) = 0;
-
-                    int size = 14;
-                    vector<int> aux_p(size);
-                    for(uint l = 0; l < aux_p.size(); l++)
-                        aux_p.at(l) = l + 1;
-
-                    for(int j = 1; j < nps; j++) {
-
-                        int r = rand() % size;
-                        size--;
-
-                        lcs.at(j) = aux_p.at(r);
-                        aux_p.erase(aux_p.begin() + r);
-
-                        /*for(int k = 0; k < 1000; k++) {
-
-                            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-                            int p = 1 + floor(npg + 0.5 - sqrt(pow((npg + 0.5), 2) - npg * (npg + 1) * r));
-
-                            for(int l = 0; l < lcs.size(); l++) {
-                                if(p == lcs.at(l)) {
-                                    auxb = false; //se já possui a posição, sai pra gerar uma nova
-                                    break;
-                                }
-                            }
-
-                            if(auxb) {  //se não possui a posição, adiciona em lcs
-                                lcs.at(j) = p;
-                                break;
-                            }
-                        } */
-                    }
-
-                    sort(lcs.begin(), lcs.end());   //ordena lcs
-
-                    vector<vector<float>> s(nps, vector<float>(nopt));
-                    vector<float> snew;
-                    vector<float> sf(nps);
-
-                    for(int j = 0; j < nps; j++) {
-                        s.at(j) = cx.at(lcs.at(j));
-                        sf.at(j) = cf.at(lcs.at(j));
-                     }
-
-                    //chamar cceua
-                    cout << "chamando cceua\n";
-                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
-                    cout << "fim do cceua\n";
-
-                    s.at(nps - 1) = snew;
-                    sf.at(nps - 1) = cce;
-
-                    //põe o simplex no complex
-                    for(int j = 0; j < nps; j++) {
-                        cx.at(lcs.at(j)) = s.at(j);
-                        cf.at(lcs.at(j)) = sf.at(j); 
-                    }
-                }
-
-                //põe o complex na população
-                for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
-                    int k2 = k1 * ngs + igs;
-
-                    x_ordered.at(k2) = cx.at(k1);
-                    xf.at(k2) = cf.at(k1);
-                }
-            }
-
-            //ordena x de acordo com xf
-            vector<pair<float, vector<float>>> new_xf_to_f;
-            for(uint j = 0; j < xf.size(); j++)
-                new_xf_to_f.push_back(make_pair(xf.at(j), x_ordered.at(j)));
-
-            sort(new_xf_to_f.begin(), new_xf_to_f.end());
-            for(int j = 0; j < npt; j++)
-                x_ordered.at(j) = new_xf_to_f.at(j).second;
-
-            //melhor x e xf
-            bestx = x_ordered.at(0);
-            bestf = new_xf_to_f.at(0).first;
-
-            //pior x e xf
-            worstx = x_ordered.at(npt - 1);
-            worstf = new_xf_to_f.at(npt - 1).first;
-
-            cout << "Evolution loop: " << nloop << " - Trial - " << icall << endl;
-            cout << "BESTF: " << bestf << endl;
-            cout << "BESTX: ";
-            for(uint i = 0; i < bestx.size(); i++)
-                cout << bestx.at(i) << " ";
-            cout << "\nWORSTF: " << worstf << endl;
-            cout << "WORSTX: ";
-            for(uint i = 0; i < worstx.size(); i++)
-                cout << worstx.at(i) << " ";
-            cout << endl;
-
-            vector<vector<float>> f_matrix(npt, vector<float>(nopt + 1));
-            for(int j = 0; j < npt; j++) {
-                f_matrix.at(j).push_back(j + 1);
-
-                for(int k = 0; k < nopt; k++)
-                    f_matrix.at(j).push_back(new_xf_to_f.at(j).second.at(k));
-
-                f_matrix.at(j).push_back(new_xf_to_f.at(j).first);
-            }
-
-            matrices.push_back(f_matrix);
-            size_m++;
-        }
-
-        cout << "\n---------------------------------------------------\n\n";
+    pair<int, int> MainWindow::best_parameters(int npt, int nopt) {
+        float menor = 999999;
+        int indice_i, indice_j;
 
         for(int i = 0; i < size_m; i++) {
             for(int j = 0; j < npt; j++) {
-                for(int k = 0; k < nopt; k++) {
-                    cout << matrices.at(i).at(j).at(k) << " ";
+                if(matrices.at(i).at(j).at(nopt + 1) < menor) {
+                    menor = matrices.at(i).at(j).at(nopt + 1);
+                    indice_i = i;
+                    indice_j = j;
                 }
-                cout << endl;
             }
-            cout << "\n---------------------------------------------------\n\n";
         }
+
+        return make_pair(indice_i, indice_j);
     }
 
     float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
@@ -544,7 +568,6 @@ using namespace QtCharts;
         }
 
         float fnew;
-        cout << "HR reflection" << endl;
         fnew = hydrological_routine(*snew, tot_dias, false);
         icall++;
 
@@ -552,7 +575,6 @@ using namespace QtCharts;
             for(uint j = 0; j < snew->size(); j++)
                 snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
-            cout << "HR contraction (reflection failed)" << endl;
             fnew = hydrological_routine(*snew, tot_dias, false);
             icall++;
 
@@ -560,7 +582,6 @@ using namespace QtCharts;
                 for(uint j = 0; j < snew->size(); j++)
                     snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                cout << "HR random (reflection and contraction failed)" << endl;
                 fnew = hydrological_routine(*snew, tot_dias, false);
                 icall++;
             }
@@ -571,8 +592,8 @@ using namespace QtCharts;
 
 
     float MainWindow::hydrological_routine(vector<float> x, float tot_dias, bool best_p) {
-        int i, j, dia, sub_b=0;
-        float kcr, Kb, Kss, Cs, Css, Cb, Coef_Ia, evap_lamina, rmse = 0;
+        int i, j, dia, sub_b = 0;
+        float kcr, Kb, Kss, Cs, Css, Cb, Coef_Ia, rmse = 0;
         bool flag = false;
 
         kcr = x.at(0);
@@ -604,12 +625,16 @@ using namespace QtCharts;
         subw.setNumSub_b(ui->third_file->text());
 
         //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
+
         met.criaVetor1(subw, tot_dias);
         met.loadData1(subw, ui->first_file->text(), tot_dias);
+
         usosolo.criaVetor2(subw, tot_dias);
         usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
+
         entrada.criaVetor3(subw);
         entrada.loadData3(subw, ui->third_file->text());
+
         anterior.iniciaVetores(subw);
 
     //======================ABERTURA DE ARQUIVOS DE SAÍDA=============================
@@ -755,12 +780,15 @@ using namespace QtCharts;
     //========================================================================================================
 
         vector<float> vazao_total;
-        float total_dias_observados = tot_dias;
+        int total_dias_observados = tot_dias;
         float dif_valores = 0;
 
-        for(i=0; i<tot_dias; i++){
+        //cara... faz favor
+        int aux = tot_dias;
+
+        for(i = 0; i < aux; i++) {
             float vazao_diaria = 0;
-            dia=i+1;
+            dia = i + 1;
 
             met.setVarMet(dia, sub_b, subw); //função chamada para ter a informação da data.
 
@@ -776,13 +804,35 @@ using namespace QtCharts;
             fileVESS << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;
             fileVEB << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;    */
 
-            for(j=0; j<(subw.numSub_b); j++){
-                float vazao_sub = 0;
-                sub_b=j;
-                //Busca na matriz as váriaveis do arquivo de entrada.
+            for(j = 0; j < subw.numSub_b; j++) {
+                sub_b = j;
+
+                //AJUSTA AS VARIÁVEIS REFERENTES AO DIA ANTERIOR:
+                anterior.SetPrec(sub_b, met.precMedia);
+                anterior.SetL3(sub_b, intercep.lam3);
+                anterior.SetAm(sub_b, solo.am);
+                anterior.SetAt(sub_b, solo.at);
+                anterior.SetPts(sub_b, solo.pts);
+                anterior.SetPe(sub_b, solo.pe);
+                anterior.SetLam_ESS(sub_b, ESS.lam_ESS);
+                anterior.SetLam_EB(sub_b, EB.lam_EB);
+                anterior.SetDCR(sub_b, solo.dcr);
+                anterior.SetETr(sub_b, evapo.ETr);
+                anterior.SetVfinal_ESD(sub_b, ESD.vol_final_ESD);
+                anterior.SetVfinal_ESS(sub_b, ESS.vol_final_ESS);
+                anterior.SetVfinal_EB(sub_b, EB.vol_final_EB);
+            }
+
+            #pragma omp parallel for private(j) reduction(+:vazao_diaria)
+            for(j = 0; j < subw.numSub_b; j++) {
+                float vazao_sub = 0, evap_lamina;
+                sub_b = j;
+
                 met.setVarMet(dia, sub_b, subw);
                 usosolo.setVarUS(dia, sub_b, subw);
-                h_sistrad2=usosolo.h_sistrad;
+
+                h_sistrad2 = usosolo.h_sistrad;
+
                 entrada.setVarEntrada(sub_b, h_sistrad2);
 
                 //Layout do arquivo de saída "Resultados".
@@ -790,6 +840,7 @@ using namespace QtCharts;
                 //std::cout << "Dia " << dia << "," <<" Sub_b " << sub_b+1 << ":" <<std::endl;
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE EVAPOTRANSPIRAÇÃO
+
                 evapo.setAll(dia, &evap_lamina, met, entrada, usosolo);
 
                 /*
@@ -818,6 +869,7 @@ using namespace QtCharts;
 
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE INTERCEPTAÇÃO
+
                 intercep.setAll(dia, sub_b, evap_lamina, anterior, met, usosolo);
                 /*intercep.setCri(usosolo);
                 intercep.setLam1(dia, sub_b, anterior);
@@ -826,9 +878,9 @@ using namespace QtCharts;
                 intercep.setLam3();
                 */
 
-
                 solo.setAll(dia, sub_b, Coef_Ia, kcr, anterior, entrada, intercep, met);
                 evapo.setETr(solo);
+
                 /*solo.setAm(entrada); //BLOCO COM ERROS!!!!(CHAMADAS ERRADAS: LAM ess, eb)
                 solo.setAt(dia, sub_b, anterior);
                 solo.setPts(intercep, met);
@@ -873,6 +925,7 @@ using namespace QtCharts;
                 */
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE INTERCEPTAÇÃO
+
                 intercep.setAll(dia, sub_b, evap_lamina, anterior, met, usosolo);
                 /*
                 intercep.setCri(usosolo);
@@ -882,23 +935,17 @@ using namespace QtCharts;
                 intercep.setLam3();*/
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE ESD
-
                 ESD.setAll(dia, sub_b, Cs, anterior, solo, entrada);
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE ESS
-
                 ESS.setAll(dia, sub_b, Kss, Css, solo, anterior, entrada);
 
                 //SETA TODOS OS ATRIBUTOS DA CLASSE EB
-
                 EB.setAll(dia, sub_b, Kb, Cb, solo, anterior, entrada);
 
-
-                //Seta a variável "vazao_total".
                 vazao_sub = ESD.vazao_ESD + ESS.vazao_ESS + EB.vazao_EB;
-                vazao_diaria += vazao_sub;
 
-                //cout << "sub bacia " << sub_b + 1 << ", vazão sub bacia: " << vazao_sub << endl;
+                vazao_diaria += vazao_sub;
 
     //===================Escreve os resultados desejados em seus respectivos arquivos de saída.=================
 
@@ -960,23 +1007,9 @@ using namespace QtCharts;
                     fileTest << std::fixed << std::setprecision(2) << solo.at << std::endl;
                 }*/
 
-
-                //AJUSTA AS VARIÁVEIS REFERENTES AO DIA ANTERIOR:
-                anterior.SetPrec(sub_b, met.precMedia);
-                anterior.SetL3(sub_b, intercep.lam3);
-                anterior.SetAm(sub_b, solo.am);
-                anterior.SetAt(sub_b, solo.at);
-                anterior.SetPts(sub_b, solo.pts);
-                anterior.SetPe(sub_b, solo.pe);
-                anterior.SetLam_ESS(sub_b, ESS.lam_ESS);
-                anterior.SetLam_EB(sub_b, EB.lam_EB);
-                anterior.SetDCR(sub_b, solo.dcr);
-                anterior.SetETr(sub_b, evapo.ETr);
-                anterior.SetVfinal_ESD(sub_b, ESD.vol_final_ESD);
-                anterior.SetVfinal_ESS(sub_b, ESS.vol_final_ESS);
-                anterior.SetVfinal_EB(sub_b, EB.vol_final_EB);
-
             }
+            #pragma omp barrier
+
             //fileTest << std::endl;
          /*   fileETc << std::endl;
             fileETr << std::endl;
@@ -1005,8 +1038,10 @@ using namespace QtCharts;
             }
 
             vazao_total.push_back(vazao_diaria);
-
         }
+
+        cout << "Dias observados: " << total_dias_observados << endl;
+        cout << "Diferenca: " << dif_valores << endl;
 
         if(flag)
              rmse = sqrt(dif_valores/total_dias_observados);
