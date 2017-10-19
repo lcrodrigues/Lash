@@ -126,9 +126,9 @@ void VarEntrada::criaVetor3(SubBacia subw)
 }
 void VarEntrada::loadData3(SubBacia subw, QString filename3)
 {
-    int i,j;
+    int i, j;
     int lin=subw.numSub_b;
-    int col=8;
+    int col = 8;
 
     string nome_arquivo3;
     nome_arquivo3=filename3.toStdString();
@@ -137,24 +137,24 @@ void VarEntrada::loadData3(SubBacia subw, QString filename3)
     fp.open(nome_arquivo3, std::ios::in);
 
     if(fp.is_open() && fp.good()) {
-        for(i=0; i<lin; i++){//percorre as linhas da matriz
-            for(j=0; j<col; j++){//percorre as colunas da matriz
+        for(i = 0; i < lin; i++){
+            for(j = 0; j < col; j++){
                 fp >> this->dadosEntrada[i][j];
             }
         }
     }
     fp.close();
 }
-void VarEntrada::setVarEntrada(int sub_b, float h_sistrad)
-{
 
-    this->h_balhid=this->dadosEntrada[sub_b][1];
-    this->altitude=this->dadosEntrada[sub_b][2];
-    this->Upmp=this->dadosEntrada[sub_b][3];
-    this->Usaturacao=this->dadosEntrada[sub_b][4];
-    this->Tc=this->dadosEntrada[sub_b][5];
-    this->latitude=this->dadosEntrada[sub_b][6];
-    this->Asubw=this->dadosEntrada[sub_b][7];
+void VarEntrada::setVarEntrada(int sub_b, float h_sistrad) {
+
+    this->h_balhid = this->dadosEntrada[sub_b][1];
+    this->altitude = this->dadosEntrada[sub_b][2];
+    this->Upmp = this->dadosEntrada[sub_b][3];
+    this->Usaturacao = this->dadosEntrada[sub_b][4];
+    this->Tc = this->dadosEntrada[sub_b][5];
+    this->latitude = this->dadosEntrada[sub_b][6];
+    this->Asubw = this->dadosEntrada[sub_b][7];
 
     if(h_sistrad > this->h_balhid){
          this->h_balhid = this->dadosEntrada[sub_b][1];
@@ -614,24 +614,24 @@ void VarInterceptacao::setLam3()
 }
 void VarInterceptacao::setAll(int dia, int sub_b, float evap_lamina, VarDiaAnterior anterior, VarMeteorologicas objmet, VarUsoDoSolo usosolo)
 {
-    this->cri=usosolo.iaf*0.2;
-    if(dia==1){
-        this->lam1=0;
+    this->cri = usosolo.iaf * 0.2;
+    if(dia == 1){
+        this->lam1 = 0;
     }
     else{
-        this->lam1=anterior.L3[sub_b]; //dado da matriz = (L3-)cod=207;
+        this->lam1 = anterior.L3[sub_b]; //dado da matriz = (L3-)cod=207;
     }
-    if((objmet.precMedia+this->lam1)>this->cri){
-        this->lam2=this->cri;
+    if((objmet.precMedia+this->lam1) > this->cri){
+        this->lam2 = this->cri;
     }
     else{
-        this->lam2=objmet.precMedia+this->lam1;
+        this->lam2 = objmet.precMedia + this->lam1;
     }
-    this->evap_lam=evap_lamina;
+    this->evap_lam = evap_lamina;
     if(this->evap_lam > this->lam2){
         this->evap_lam = this->lam2;
     }
-    this->lam3=this->lam2-this->evap_lam;
+    this->lam3 = this->lam2 - this->evap_lam;
 }
 
 //=========================================================
@@ -800,14 +800,15 @@ void VarEB::setVolFinalEB()
 }
 void VarEB::setAll(int dia, int sub_b, float Kb, float Cb, VarSolo solo, VarDiaAnterior anterior, VarEntrada objentrada)
 {
-    if(solo.at>=solo.ac){
-        this->lam_EB=Kb*((solo.at-solo.ac)/(solo.am-solo.ac));
+    if(solo.at >= solo.ac){
+        this->lam_EB = Kb * ((solo.at-solo.ac) / (solo.am-solo.ac));
     }
     else{
         this->lam_EB=0;
     }
-    if(dia==1){
-        this->vol_inic_EB=0;
+
+    if(dia == 1) {
+        this->vol_inic_EB = 0;
     }
     else{
         this->vol_inic_EB = anterior.Vfinal_EB[sub_b];
@@ -816,8 +817,9 @@ void VarEB::setAll(int dia, int sub_b, float Kb, float Cb, VarSolo solo, VarDiaA
     this->vol_ger_EB= this->vol_inic_EB+(this->lam_EB*objentrada.Asubw*1000);
     this->vazao_EB = this->vol_ger_EB/(Cb*24*60*60);
     this->vol_final_EB = this->vol_ger_EB-(this->vazao_EB*1440*60);
-    if(this->vol_final_EB<0){
-        this->vol_final_EB=0;
+
+    if(this->vol_final_EB <0){
+        this->vol_final_EB = 0;
     }
 
 }

@@ -5,7 +5,9 @@
 #include <vector>
 
 using namespace std;
+
 //==VARIAVEIS GLOBAIS======
+
 
 //=========================
 

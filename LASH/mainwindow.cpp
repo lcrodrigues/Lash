@@ -173,14 +173,14 @@ using namespace QtCharts;
         float bestf, worstf;
         int tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, bestx, worstx, xf;
+        vector<float> bound, bestx, worstx, xf(npt);
 
         for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
 
         vector<vector<float>> x(npt, vector<float>(nopt));
 
-        for(int i = 0; i < npt; i++) {  //inicia x0
+        for(int i = 0; i < npt; i++) {
             for(int j = 0; j < nopt; j++) {
                 float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
                 x.at(i).at(j) = bl.at(j) + r * bound.at(j);
@@ -194,20 +194,33 @@ using namespace QtCharts;
 
         // código real
         omp_set_num_threads(omp_get_max_threads());
-        //omp_set_num_threads(2);
 
-        for(int i = 0; i < npt; i++) {
+        int i;
+        clock_t begin_time;
 
-            cout << "Iniciando loop " << i + 1 << "." << endl;
-            const clock_t begin_time = clock();
+        #pragma omp parallel for private(i, begin_time) schedule(static)
+        for(i = 0; i < npt; i++) {
+
+            #pragma omp critical
+            {
+                cout << "Iniciando loop " << i << "." << endl;
+                begin_time = clock();
+            }
+
             float r = hydrological_routine(x.at(i), tot_dias, false);
-            cout << "Total: " << float( clock () - begin_time ) /  CLOCKS_PER_SEC << "s\n";
 
-            xf.push_back(r);
+            #pragma omp critical
+            {
+                cout << "\nLoop " << i << ", total: " << float( clock() - begin_time ) /  CLOCKS_PER_SEC << "s\n";
+                xf.at(i) = r;
 
-            icall++;
-            cout << i + 1 << "\nRMSE: " << xf.at(i) << endl;
+                icall++;
+                cout << i << " RMSE: " << r << endl << endl;
+            }
         }
+        #pragma omp barrier
+
+        cout << "Fim do cálculo de RMSE, iniciando pt2\n";
 
         /*
         //código para fins acadêmicos
@@ -326,16 +339,18 @@ using namespace QtCharts;
         cout << "Entra em while(maxn)\n";
 
         int icount = 1;
-        int aux = 0;
 
         while(icall < maxn) { //loop contando iterações
-            //cout << "ICALL: " << icall << endl;
+            cout << "ICALL: " << icall << endl;
             nloop++;
+
 
             for(int igs = 0; igs < ngs; igs++) {    //0 a 5
                 vector<vector<float>> cx(npg, vector<float>(nopt));
                 vector<float> cf(npg);
 
+                //int k1;
+                //#pragma omp parallel for private(k1)
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
                     int k2 = k1 * ngs + igs;
 
@@ -343,6 +358,8 @@ using namespace QtCharts;
                     cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
                 }
 
+                //int i;
+                //#pragma omp parallel for private(i)
                 for(int i = 0; i < nspl; i++) { //0 a 15
                     vector<int> lcs(8);
                     lcs.at(0) = 0;
@@ -446,7 +463,7 @@ using namespace QtCharts;
             matrices.push_back(f_matrix);
             size_m++;
 
-            aux++;
+            //aux++;
         }
 
         cout << "MATRIZES FINAIS:\n---------------------------------------------------\n\n";
@@ -626,16 +643,33 @@ using namespace QtCharts;
 
         //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
 
-        met.criaVetor1(subw, tot_dias);
-        met.loadData1(subw, ui->first_file->text(), tot_dias);
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            {
+                met.criaVetor1(subw, tot_dias);
+                met.loadData1(subw, ui->first_file->text(), tot_dias);
+            }
 
-        usosolo.criaVetor2(subw, tot_dias);
-        usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
+            #pragma omp section
+            {
+                usosolo.criaVetor2(subw, tot_dias);
+                usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
+            }
 
-        entrada.criaVetor3(subw);
-        entrada.loadData3(subw, ui->third_file->text());
+            #pragma omp section
+            {
+                entrada.criaVetor3(subw);
+                entrada.loadData3(subw, ui->third_file->text());
+            }
 
-        anterior.iniciaVetores(subw);
+            #pragma omp section
+            {
+                anterior.iniciaVetores(subw);
+            }
+         }
+         #pragma omp barrier
+
 
     //======================ABERTURA DE ARQUIVOS DE SAÍDA=============================
 
@@ -804,224 +838,56 @@ using namespace QtCharts;
             fileVESS << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;
             fileVEB << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;    */
 
-            for(j = 0; j < subw.numSub_b; j++) {
-                sub_b = j;
 
-                //AJUSTA AS VARIÁVEIS REFERENTES AO DIA ANTERIOR:
-                anterior.SetPrec(sub_b, met.precMedia);
-                anterior.SetL3(sub_b, intercep.lam3);
-                anterior.SetAm(sub_b, solo.am);
-                anterior.SetAt(sub_b, solo.at);
-                anterior.SetPts(sub_b, solo.pts);
-                anterior.SetPe(sub_b, solo.pe);
-                anterior.SetLam_ESS(sub_b, ESS.lam_ESS);
-                anterior.SetLam_EB(sub_b, EB.lam_EB);
-                anterior.SetDCR(sub_b, solo.dcr);
-                anterior.SetETr(sub_b, evapo.ETr);
-                anterior.SetVfinal_ESD(sub_b, ESD.vol_final_ESD);
-                anterior.SetVfinal_ESS(sub_b, ESS.vol_final_ESS);
-                anterior.SetVfinal_EB(sub_b, EB.vol_final_EB);
-            }
-
-            #pragma omp parallel for private(j) reduction(+:vazao_diaria)
+            //#pragma omp parallel for default(shared) private(j) reduction(+:vazao_diaria)
             for(j = 0; j < subw.numSub_b; j++) {
                 float vazao_sub = 0, evap_lamina;
                 sub_b = j;
 
                 met.setVarMet(dia, sub_b, subw);
+
                 usosolo.setVarUS(dia, sub_b, subw);
-
                 h_sistrad2 = usosolo.h_sistrad;
-
                 entrada.setVarEntrada(sub_b, h_sistrad2);
 
-                //Layout do arquivo de saída "Resultados".
-                //outFile << "Dia " << dia << ", " << "Sub-bacia " << sub_b+1 << ":" << std::endl;
-                //std::cout << "Dia " << dia << "," <<" Sub_b " << sub_b+1 << ":" <<std::endl;
-
-                //SETA TODOS OS ATRIBUTOS DA CLASSE EVAPOTRANSPIRAÇÃO
 
                 evapo.setAll(dia, &evap_lamina, met, entrada, usosolo);
-
-                /*
-                evapo.setTmedia(met);
-                evapo.setEs(met);
-                evapo.setEa(met);
-                evapo.setSsvpc();
-                evapo.setAp(entrada);
-                evapo.setPc();
-                evapo.setRns(usosolo, met);
-                evapo.setSbc();
-                evapo.setJday(dia);
-                evapo.setDr();
-                evapo.setSolar_declination();
-                evapo.setWs(entrada);
-                evapo.setRa(entrada);
-                evapo.setRso(entrada);
-                evapo.setRnl(met);
-                evapo.setRn();
-                evapo.setTkv();
-                evapo.setU10(usosolo, met);
-                evapo.setAeroResist(usosolo);
-                evapo.setETc(usosolo);
-                evapo.setOthers(&evap_lamina);
-                */
-
-
-                //SETA TODOS OS ATRIBUTOS DA CLASSE INTERCEPTAÇÃO
-
                 intercep.setAll(dia, sub_b, evap_lamina, anterior, met, usosolo);
-                /*intercep.setCri(usosolo);
-                intercep.setLam1(dia, sub_b, anterior);
-                intercep.setLam2(met);
-                intercep.setEvapLam(evap_lamina);
-                intercep.setLam3();
-                */
 
                 solo.setAll(dia, sub_b, Coef_Ia, kcr, anterior, entrada, intercep, met);
                 evapo.setETr(solo);
 
-                /*solo.setAm(entrada); //BLOCO COM ERROS!!!!(CHAMADAS ERRADAS: LAM ess, eb)
-                solo.setAt(dia, sub_b, anterior);
-                solo.setPts(intercep, met);
-                solo.setS();
-                solo.setM(sub_b, anterior);
-                if(ui->checkBox_parametros->isChecked()){
-                    Coef_Ia=0.1145;
-                }
-                else{
-                    Coef_Ia=ui->lineEdit_coef->text().toFloat(NULL);
-                }
-                solo.setIa(Coef_Ia);0.552709 0.873929 1.10771 1.29059 1.4442 1.57715 1.69497
-                solo.setPe();
-                solo.setAcc();
-                 if(ui->checkBox_parametros->isChecked()){
-                    Kss=5.2609;
-                }
-                else{
-                    Kss=ui->lineEdit_kss->text().toFloat(NULL);
-                }
-                ESS.setLamESS(solo, Kss);
-                solo.setAc();
-                if(ui->checkBox_parametros->isChecked()){
-                    Kb=0.6338;
-                }
-                else{
-                    Kb=ui->lineEdit_kb->text().toFloat(NULL);
-                }
-                EB.setLamEB(solo, Kb);
-                solo.setAcr();
-                if(ui->checkBox_parametros->isChecked()){
-                    kcr=2.0213;
-                }
-                else{
-                    kcr=ui->lineEdit_kcr->text().toFloat(NULL);
-                }
-                solo.setDcr(kcr);
-                solo.setAl();
-                solo.setApmp();
-                solo.setKs();
-                evapo.setETr(solo);
-                */
-
-                //SETA TODOS OS ATRIBUTOS DA CLASSE INTERCEPTAÇÃO
-
                 intercep.setAll(dia, sub_b, evap_lamina, anterior, met, usosolo);
-                /*
-                intercep.setCri(usosolo);
-                intercep.setLam1(dia, sub_b, anterior);
-                intercep.setLam2(met);
-                intercep.setEvapLam(evap_lamina);
-                intercep.setLam3();*/
 
-                //SETA TODOS OS ATRIBUTOS DA CLASSE ESD
                 ESD.setAll(dia, sub_b, Cs, anterior, solo, entrada);
-
-                //SETA TODOS OS ATRIBUTOS DA CLASSE ESS
                 ESS.setAll(dia, sub_b, Kss, Css, solo, anterior, entrada);
-
-                //SETA TODOS OS ATRIBUTOS DA CLASSE EB
                 EB.setAll(dia, sub_b, Kb, Cb, solo, anterior, entrada);
 
                 vazao_sub = ESD.vazao_ESD + ESS.vazao_ESS + EB.vazao_EB;
-
                 vazao_diaria += vazao_sub;
 
-    //===================Escreve os resultados desejados em seus respectivos arquivos de saída.=================
+                //AJUSTA AS VARIÁVEIS REFERENTES AO DIA ANTERIOR:
+                anterior.SetPrec(sub_b, met.precMedia);
 
-                /*if(ui->checkBox_ETc->isChecked()){
-                    std::cout << "Etc: " << evapo.ETc << std::endl;
-                    fileETc << "\t" << std::fixed << std::setprecision(4) << evapo.ETc;
-                }
-                if(ui->checkBox_ETr->isChecked()){
-                    std::cout << "ETr: " << evapo.ETr << std::endl;
-                    //fileETr << "\t" << std::fixed << std::setprecision(4) << evapo.ETr;
-                    fileETr << std::fixed << std::setprecision(2) << evapo.ETr << "\t";
-                }
-                if(ui->checkBox_Vazao->isChecked()){
-                    std::cout << "Vazao: " << vazao_total <<std::endl;
-                    //fileVazao << "\t" << std::fixed << std::setprecision(4) << vazao_total;
-                    fileVazao << std::fixed << std::setprecision(4) << vazao_total << "\t";
-                }
-                if(ui->checkBox_Pe->isChecked()){
-                    filePe << "\t" << std::fixed << std::setprecision(4) << solo.pe;
-                }
-                if(ui->checkBox_Pts->isChecked()){
-                    filePts << "\t" << std::fixed << std::setprecision(4) << solo.pts;
-                }
-                if(ui->checkBox_Dcr->isChecked()){
-                    fileDcr << "\t" << std::fixed << std::setprecision(4) << solo.dcr;
-                }
-                if(ui->checkBox_Ia->isChecked()){
-                    fileIa << "\t" << std::fixed << std::setprecision(4) << solo.ia;
-                }
-                if(ui->checkBox_At->isChecked()){
-                    //fileAt << "\t" << std::fixed << std::setprecision(4) << solo.at;
-                    fileAt << std::fixed << std::setprecision(2) << solo.at << "\t";
-                }
-                if(ui->checkBox_vESD->isChecked()){
-                    fileVESD << "\t" << std::fixed << std::setprecision(4) << ESD.vazao_ESD;
-                }
-                if(ui->checkBox_vESS->isChecked()){
-                    fileVESS << "\t" << std::fixed << std::setprecision(4) << ESS.vazao_ESS;
-                }
-                if(ui->checkBox_vEB->isChecked()){
-                    fileVEB << "\t" << std::fixed << std::setprecision(4) << EB.vazao_EB;
-                }
+                anterior.SetL3(sub_b, intercep.lam3);
 
-                outFile << std::endl;
-                if(ui->checkBox_ETc->isChecked()){
-                    std::cout << "Etc: " << evapo.ETc << std::endl;
-                    outFile<< "ETc: " << evapo.ETc << std::endl;
-                }
-                if(ui->checkBox_ETr->isChecked()){
-                    std::cout << "ETr: " << evapo.ETr << std::endl;
-                    outFile << "ETr: " << evapo.ETr << std::endl;
-                }
-                if(ui->checkBox_Vazao->isChecked()){
-                    std::cout << "Vazao: " << vazao_total <<std::endl;
-                    outFile << "Vazao: " << vazao_total << std::endl;
-                }
-                outFile << std::endl;
-                if(sub_b == 22){
-                    fileTest << std::fixed << std::setprecision(2) << solo.at << std::endl;
-                }*/
+                anterior.SetAm(sub_b, solo.am);
+                anterior.SetAt(sub_b, solo.at);
+                anterior.SetPts(sub_b, solo.pts);
+                anterior.SetPe(sub_b, solo.pe);
+                anterior.SetDCR(sub_b, solo.dcr);
+
+                anterior.SetETr(sub_b, evapo.ETr);
+
+                anterior.SetVfinal_ESD(sub_b, ESD.vol_final_ESD);
+
+                anterior.SetLam_ESS(sub_b, ESS.lam_ESS);
+                anterior.SetVfinal_ESS(sub_b, ESS.vol_final_ESS);
+
+                anterior.SetLam_EB(sub_b, EB.lam_EB);
+                anterior.SetVfinal_EB(sub_b, EB.vol_final_EB);
 
             }
-            #pragma omp barrier
-
-            //fileTest << std::endl;
-         /*   fileETc << std::endl;
-            fileETr << std::endl;
-            fileVazao << std::endl;
-            filePe << std::endl;
-            filePts << std::endl;
-            fileDcr << std::endl;
-            fileIa << std::endl;
-            fileAt << std::endl;
-            fileVESD << std::endl;
-            fileVESS << std::endl;
-            fileVEB << std::endl;   */
 
             if(met.dado_observado == -9999){
                 total_dias_observados--;
@@ -1039,9 +905,6 @@ using namespace QtCharts;
 
             vazao_total.push_back(vazao_diaria);
         }
-
-        cout << "Dias observados: " << total_dias_observados << endl;
-        cout << "Diferenca: " << dif_valores << endl;
 
         if(flag)
              rmse = sqrt(dif_valores/total_dias_observados);
