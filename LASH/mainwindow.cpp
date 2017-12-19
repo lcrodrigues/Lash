@@ -2,11 +2,13 @@
 #include <fstream>
 #include <ctime>
 #include <cmath>
+#include <chrono>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <algorithm>
 
 #include <omp.h>
 
@@ -26,6 +28,7 @@
 QT_CHARTS_USE_NAMESPACE
 using namespace std;
 using namespace QtCharts;
+using namespace std::chrono; // nanoseconds, system_clock, seconds
     
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
     {
@@ -88,9 +91,20 @@ using namespace QtCharts;
 
     void MainWindow::sceua() {
 
+        clock_t begin_sceua;
+        begin_sceua = clock();
+        srand(time(NULL));
+
+        total_count = 0;
+        better = 0;
+        worse = 0;
+        ref = 0;
+        con = 0;
+        random = 0;
+
         icall = 0;
         int ngs = 5;
-        int iniflg = 0;
+        int iniflg = 1;
 
         vector<float> x0;
 
@@ -119,7 +133,7 @@ using namespace QtCharts;
 
         // ---
 
-        int maxn = 1000;
+        int maxn = 1500;
 
         /*if(ui->checkBox_parametros->isChecked())    //kcr
             x0.push_back(2.0213);
@@ -173,7 +187,7 @@ using namespace QtCharts;
         float bestf, worstf;
         int tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, bestx, worstx, xf(npt);
+        vector<float> bound, bestx, worstx, xf;
 
         for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
@@ -187,7 +201,7 @@ using namespace QtCharts;
             }
         }
 
-        if (iniflg == 1) {
+        if (iniflg == 0) {
             for(uint i = 0; i < x.at(0).size(); i++)
                 x.at(0).at(i) = x0.at(i);
         }
@@ -196,35 +210,30 @@ using namespace QtCharts;
         omp_set_num_threads(omp_get_max_threads());
 
         int i;
-        clock_t begin_time;
+        //clock_t begin_time;
 
-        #pragma omp parallel for private(i, begin_time) schedule(static)
+
+        #pragma omp parallel for private(i) schedule(static)
         for(i = 0; i < npt; i++) {
 
             #pragma omp critical
-            {
                 cout << "Iniciando loop " << i << "." << endl;
-                begin_time = clock();
-            }
 
             float r = hydrological_routine(x.at(i), tot_dias, false);
 
             #pragma omp critical
             {
-                cout << "\nLoop " << i << ", total: " << float( clock() - begin_time ) /  CLOCKS_PER_SEC << "s\n";
-                xf.at(i) = r;
-
-                icall++;
-                cout << i << " RMSE: " << r << endl << endl;
+                xf.push_back(r);
+                cout << "\nLoop " << i << " RMSE: " << r << endl << endl;
             }
         }
         #pragma omp barrier
 
-        cout << "Fim do cálculo de RMSE, iniciando pt2\n";
 
-        /*
+     //   cout << "Fim do cálculo de RMSE, iniciando pt2\n";
+
         //código para fins acadêmicos
-        xf.push_back(1.48814);
+    /*    xf.push_back(1.48814);
         xf.push_back(1.48627);
         xf.push_back(1.70392);
         xf.push_back(1.56368);
@@ -299,7 +308,10 @@ using namespace QtCharts;
         xf.push_back(3.9123); //fake
         xf.push_back(2.8526);
         xf.push_back(1.71648);
-        //fim do código para fins acadêmicos    */
+        //fim do código para fins acadêmicos */
+
+
+       /* */
 
         vector<pair<float, vector<float>>> xf_to_f;
 
@@ -321,65 +333,90 @@ using namespace QtCharts;
         worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
         worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
 
+        //calcula média
+        float media_rmse = 0;
+        #pragma omp parallel for private(i) reduction(+ : media_rmse)
+        for(uint i = 0; i < xf.size(); i++)  media_rmse += xf.at(i);
+
+        media_rmse /= xf.size();
+        media_vec.push_back(media_rmse);
+
+        cout << "---------------------------------------------------\n";
         //exibir dados
         cout << "The initial loop: 0" << endl;
         cout << "BESTF: " << bestf << endl;
+
         cout << "BESTX: ";
         for(uint i = 0; i < bestx.size(); i++)
             cout << bestx.at(i) << " ";
+
         cout << "\nWORSTF: " << worstf << endl;
+
         cout << "WORSTX: ";
         for(uint i = 0; i < worstx.size(); i++)
             cout << worstx.at(i) << " ";
         cout << endl;
 
+        cout << "AVERAGE (ERRORS): " << media_rmse << endl << endl;
+
         int nloop = 0;
         size_m = 0;
 
-        cout << "Entra em while(maxn)\n";
+        for(int i = 0; i < npt; i++) {
+            for(int j = 0; j < nopt; j++)
+                cout << x_ordered.at(i).at(j) << " ";
+            cout << endl;
+        }
+        cout << "---------------------------------------------------\n";
 
+        cout << "While\n";
         int icount = 1;
 
         while(icall < maxn) { //loop contando iterações
-            cout << "ICALL: " << icall << endl;
+            cout << "Icall: " << icall << endl;
             nloop++;
 
+            int igs;
+            clock_t bt = clock();
 
-            for(int igs = 0; igs < ngs; igs++) {    //0 a 5
+            #pragma omp parallel for private(igs)
+            for(igs = 0; igs < ngs; igs++) {    //0 a 5
+
                 vector<vector<float>> cx(npg, vector<float>(nopt));
                 vector<float> cf(npg);
 
-                //int k1;
-                //#pragma omp parallel for private(k1)
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+
                     int k2 = k1 * ngs + igs;
 
                     cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
                     cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
                 }
 
-                //int i;
-                //#pragma omp parallel for private(i)
                 for(int i = 0; i < nspl; i++) { //0 a 15
-                    vector<int> lcs(8);
-                    lcs.at(0) = 0;
 
-                    int size = 14;
-                    vector<int> aux_p(size);
-                    for(uint l = 0; l < aux_p.size(); l++)
-                        aux_p.at(l) = l + 1;
+                    vector<int> lcs;
+                    vector<int>::iterator itr;
+                    lcs.push_back(0);
 
-                    for(int j = 1; j < nps; j++) {
+                    for(int k3 = 1; k3 < nps; k3++) {
+                        int pos;
 
-                        int r = rand() % size;
-                        size--;
+                        for(int q = 0; q < 1000; q++) {
+                            int n_aux = npg - 1; //para gerar random de 1 a 14
+                            float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-                        lcs.at(j) = aux_p.at(r);
-                        aux_p.erase(aux_p.begin() + r);
+                            pos = 1 + floor(n_aux + 0.5 - sqrt(pow(n_aux + 0.5, 2.0) - n_aux * (n_aux + 1) * r));
+
+                            itr = std::find(lcs.begin(), lcs.end(), pos);
+                            if(itr == lcs.end())
+                                break;
+                        }
+
+                        lcs.push_back(pos);
                     }
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
-
                     vector<vector<float>> s(nps, vector<float>(nopt));
                     vector<float> snew;
                     vector<float> sf(nps);
@@ -390,7 +427,6 @@ using namespace QtCharts;
                     }
 
                     float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
-                    //cout << "ICALL " << icall << endl;
 
                     s.at(nps - 1) = snew;
                     sf.at(nps - 1) = cce;
@@ -409,44 +445,62 @@ using namespace QtCharts;
                     x_ordered.at(k2) = cx.at(k1);
                     xf.at(k2) = cf.at(k1);
                 }
-            }
 
+            }
+            #pragma omp barrier
+
+            cout << "Fim: " <<  float(clock() - bt) /  CLOCKS_PER_SEC  << "s" << endl;
 
             //ordena x de acordo com xf
             vector<pair<float, vector<float>>> new_xf_to_f;
+            //first -> xf (rmse)
+            //second -> x (vetor de parâmetros)
+
             for(uint j = 0; j < xf.size(); j++)
                 new_xf_to_f.push_back(make_pair(xf.at(j), x_ordered.at(j)));
 
             sort(new_xf_to_f.begin(), new_xf_to_f.end());
-            for(int j = 0; j < npt; j++)
-                x_ordered.at(j) = new_xf_to_f.at(j).second;
 
             //melhor x e xf
-            bestx = x_ordered.at(0);
+            bestx = new_xf_to_f.at(0).second;
             bestf = new_xf_to_f.at(0).first;
 
             //pior x e xf
-            worstx = x_ordered.at(npt - 1);
+            worstx = new_xf_to_f.at(npt - 1).second;
             worstf = new_xf_to_f.at(npt - 1).first;
 
-            cout << "------------MATRIZ FINAL DO WHILE---------------\n";
+            //calcula média
+            media_rmse = 0;
+            #pragma omp parallel for private(i) reduction(+ : media_rmse)
+            for(uint i = 0; i < xf.size(); i++)  media_rmse += xf.at(i);
+
+            media_rmse /= xf.size();
+            media_vec.push_back(media_rmse);
+
+            cout << "------------MATRIZ FINAL DO LACO---------------\n";
             for(int i = 0; i < npt; i++) {
                 for(int j = 0; j < nopt; j++)
-                    cout << x_ordered.at(i).at(j) << " ";
+                    cout << new_xf_to_f.at(i).second.at(j) << " ";
                 cout << endl;
             }
-            cout << "----------------------------------------------\n\n";
 
-            cout << "Evolution loop: " << nloop << " - Trial - " << icall << endl;
+            cout << "\nEvolution loop: " << nloop << " - Trial - " << icall << endl;
             cout << "BESTF: " << bestf << endl;
+
             cout << "BESTX: ";
             for(uint i = 0; i < bestx.size(); i++)
                 cout << bestx.at(i) << " ";
+
             cout << "\nWORSTF: " << worstf << endl;
+
             cout << "WORSTX: ";
             for(uint i = 0; i < worstx.size(); i++)
                 cout << worstx.at(i) << " ";
             cout << endl;
+
+            cout << "AVERAGE (ERRORS): " << media_rmse << endl;
+
+            cout << "----------------------------------------------\n\n";
 
             vector<vector<float>> f_matrix(npt, vector<float>(nopt + 2));
             for(int j = 0; j < npt; j++) {
@@ -462,8 +516,6 @@ using namespace QtCharts;
 
             matrices.push_back(f_matrix);
             size_m++;
-
-            //aux++;
         }
 
         cout << "MATRIZES FINAIS:\n---------------------------------------------------\n\n";
@@ -478,6 +530,18 @@ using namespace QtCharts;
             cout << "\n---------------------------------------------------\n\n";
         }
 
+        cout << "MEDIA DE CADA ITERACAO:\n ";
+        for(uint i = 0; i < media_vec.size(); i++)
+            cout << i + 1 << ": " << media_vec.at(i) << endl;
+
+        cout << endl;
+        cout << "Numero de tentativas: " << total_count << endl;
+        cout << "Melhora nos parametros: " << better << endl;
+        cout << "Piora nos parametros: " << worse << endl;
+        cout << "Reflexao: " << ref << endl;
+        cout << "Contracao: " << con << endl;
+        cout << "Aleatorio: " << random << endl;
+
         pair<int, int> bp = best_parameters(npt, nopt);
 
         vector<float> real_bp;
@@ -488,6 +552,8 @@ using namespace QtCharts;
         for(uint i = 0; i < real_bp.size(); i++)
             cout << real_bp.at(i) << " ";
         cout << endl;
+
+        cout << "\nTempo total: " << float( clock() - begin_sceua ) /  CLOCKS_PER_SEC << "s\n";
 
         //GRÁFICO
         hydrological_routine(bestx, tot_dias, true);
@@ -553,42 +619,39 @@ using namespace QtCharts;
         float alpha = 1.0, beta = 0.5;
 
         vector<float> ce;
-        for(uint j = 0; j < sf.size() - 1; j++) { //até 8 - 1
+
+        for(uint k = 0; k < s.at(0).size(); k++) { //7
             float sum = 0;
 
-            for(uint k = 0; k < s.at(0).size(); k++) //até 7
+            for(uint j =0; j < sf.size() - 1; j++) //8 - 1, média dos parâmetros
                 sum += s.at(j).at(k);
 
-            float media = sum / (7 - 1); //media da linha de s, excluindo o pior ponto
-                                         //7 é o equivalente a nopt
+            float media = sum / 7; //nps - 1
             ce.push_back(media);
 
-            float svalue = ce.at(j) + alpha * (ce.at(j) - sw.at(j));  //calcula valor pro snew
+            float svalue = ce.at(k) + alpha * (ce.at(k) - sw.at(k));
             snew->push_back(svalue);
         }
 
-        bool ibound = false;
         for(uint j = 0; j < snew->size(); j++) { //verifica os limites
-            float s1, s2;
-            s1 = snew->at(j) - bl.at(j);
-            s2 = bu.at(j) - snew->at(j);
+            float s1 = snew->at(j) - bl.at(j);
+            float s2 = bu.at(j) - snew->at(j);
 
-            if(s1 < 0 || s2 < 0) {
-                ibound = true;
-                break;
-            }
-        }
+            if(s1 < 0 || s2 < 0)
+                snew->at(j) = bl.at(j) + ((1 + (rand() % 7 + 1)) * (bu.at(j) - bl.at(j))); //7 nopt
 
-        if(ibound) {   //recalcula caso fora de limites
-            for(uint j = 0; j < snew->size(); j++)
-                snew->at(j) = bl.at(j) + ((1 + (rand() % 7 + 1)) * (bu.at(j) - bl.at(j)));  //7 -> nopt
         }
 
         float fnew;
+        bool reflection = true, contraction = false;
         fnew = hydrological_routine(*snew, tot_dias, false);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
+
+            reflection = false;
+            contraction = true;
+
             for(uint j = 0; j < snew->size(); j++)
                 snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
@@ -596,12 +659,32 @@ using namespace QtCharts;
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
+
+                contraction = false;
+
                 for(uint j = 0; j < snew->size(); j++)
                     snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
                 fnew = hydrological_routine(*snew, tot_dias, false);
                 icall++;
             }
+        }
+
+
+        #pragma omp critical
+        {
+            total_count++;
+            if(fnew < fw)
+                better++;
+            else
+                worse++;
+
+            if(reflection)
+                ref++;
+            else if(contraction)
+                con++;
+            else
+                random++;
         }
 
         return fnew;
@@ -643,32 +726,16 @@ using namespace QtCharts;
 
         //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
 
-        #pragma omp parallel sections
-        {
-            #pragma omp section
-            {
-                met.criaVetor1(subw, tot_dias);
-                met.loadData1(subw, ui->first_file->text(), tot_dias);
-            }
+        met.criaVetor1(subw, tot_dias);
+        met.loadData1(subw, ui->first_file->text(), tot_dias);
 
-            #pragma omp section
-            {
-                usosolo.criaVetor2(subw, tot_dias);
-                usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
-            }
+        usosolo.criaVetor2(subw, tot_dias);
+        usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
 
-            #pragma omp section
-            {
-                entrada.criaVetor3(subw);
-                entrada.loadData3(subw, ui->third_file->text());
-            }
+        entrada.criaVetor3(subw);
+        entrada.loadData3(subw, ui->third_file->text());
 
-            #pragma omp section
-            {
-                anterior.iniciaVetores(subw);
-            }
-         }
-         #pragma omp barrier
+        anterior.iniciaVetores(subw);
 
 
     //======================ABERTURA DE ARQUIVOS DE SAÍDA=============================
@@ -839,7 +906,6 @@ using namespace QtCharts;
             fileVEB << std::defaultfloat << met.dia << "/" << met.mes << "/" << met.ano;    */
 
 
-            //#pragma omp parallel for default(shared) private(j) reduction(+:vazao_diaria)
             for(j = 0; j < subw.numSub_b; j++) {
                 float vazao_sub = 0, evap_lamina;
                 sub_b = j;
@@ -849,7 +915,6 @@ using namespace QtCharts;
                 usosolo.setVarUS(dia, sub_b, subw);
                 h_sistrad2 = usosolo.h_sistrad;
                 entrada.setVarEntrada(sub_b, h_sistrad2);
-
 
                 evapo.setAll(dia, &evap_lamina, met, entrada, usosolo);
                 intercep.setAll(dia, sub_b, evap_lamina, anterior, met, usosolo);

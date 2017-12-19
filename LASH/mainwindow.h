@@ -18,9 +18,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    int icall, size_m;
+    int icall, size_m, total_count, better, worse, ref, con, random;
     vector<float> vazao_calculada;
     vector<float> vazao_observada;
+    vector<float> media_vec;
     vector<vector<vector<float>>> matrices;
 
     explicit MainWindow(QWidget *parent = 0);
