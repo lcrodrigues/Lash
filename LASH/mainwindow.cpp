@@ -363,11 +363,9 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         size_m = 0;
 
         for(int i = 0; i < npt; i++) {
-            for(int j = 0; j < nopt; j++)
-                cout << x_ordered.at(i).at(j) << " ";
-            cout << endl;
+            cout << xf_to_f.at(i).first << " ";
         }
-        cout << "---------------------------------------------------\n";
+        cout << "\n---------------------------------------------------\n";
 
         cout << "While\n";
         int icount = 1;
@@ -477,7 +475,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             media_rmse /= xf.size();
             media_vec.push_back(media_rmse);
 
-            cout << "------------MATRIZ FINAL DO LACO---------------\n";
+            cout << "------------VALORES FINAIS DO LACO---------------\n";
             for(int i = 0; i < npt; i++) {
                 for(int j = 0; j < nopt; j++)
                     cout << new_xf_to_f.at(i).second.at(j) << " ";
