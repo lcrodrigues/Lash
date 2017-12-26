@@ -359,8 +359,9 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         int nloop = 0;
         size_m = 0;
 
+        cout << "RMSE(s):\n"
         for(int i = 0; i < npt; i++) {
-            cout << xf_to_f.at(i).first << " ";
+            cout << xf_to_f.at(i).first << endl;
         }
         cout << "\n---------------------------------------------------\n";
 
@@ -472,13 +473,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             media_rmse /= xf.size();
             media_vec.push_back(media_rmse);
 
-            cout << "------------VALORES FINAIS DO LACO---------------\n";
-            for(int i = 0; i < npt; i++) {
-                for(int j = 0; j < nopt; j++)
-                    cout << new_xf_to_f.at(i).second.at(j) << " ";
-                cout << endl;
-            }
-
             cout << "\nEvolution loop: " << nloop << " - Trial - " << icall << endl;
             cout << "BESTF: " << bestf << endl;
 
@@ -493,7 +487,12 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                 cout << worstx.at(i) << " ";
             cout << endl;
 
-            cout << "AVERAGE (ERRORS): " << media_rmse << endl;
+            cout << "AVERAGE (ERRORS): " << media_rmse << endl << endl;
+
+            cout << "RMSE(s):\n"
+	        for(int i = 0; i < npt; i++) 
+	            cout << new_xf_to_f.at(i).first << endl;
+	        
 
             cout << "----------------------------------------------\n\n";
 
@@ -629,7 +628,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         }
 
 
-
         for(uint j = 0; j < snew->size(); j++) { //verifica os limites
             float s1 = snew->at(j) - bl.at(j);
             float s2 = bu.at(j) - snew->at(j);
@@ -673,8 +671,14 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             total_count++;
             if(fnew < fw)
                 better++;
-            else
+            else {	//caso não melhore, mantém o erro antigo e seus parâmetros
+            	fnew = fw;
+
+            	for(int j = 0; j < snew->size(); j++)
+            		snew->at(j) = sw.at(j);            	
+
                 worse++;
+            }
 
             if(reflection)
                 ref++;
@@ -722,6 +726,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         subw.setNumSub_b(ui->third_file->text());
 
         //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
+
 
         met.criaVetor1(subw, tot_dias);
         met.loadData1(subw, ui->first_file->text(), tot_dias);
