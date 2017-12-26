@@ -206,13 +206,10 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                 x.at(0).at(i) = x0.at(i);
         }
 
-        // código real
-        omp_set_num_threads(omp_get_max_threads());
-
         int i;
         //clock_t begin_time;
 
-
+        omp_set_num_threads(omp_get_max_threads());
         #pragma omp parallel for private(i) schedule(static)
         for(i = 0; i < npt; i++) {
 
@@ -630,6 +627,8 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             float svalue = ce.at(k) + alpha * (ce.at(k) - sw.at(k));
             snew->push_back(svalue);
         }
+
+
 
         for(uint j = 0; j < snew->size(); j++) { //verifica os limites
             float s1 = snew->at(j) - bl.at(j);
