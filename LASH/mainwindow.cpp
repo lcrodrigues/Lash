@@ -5,7 +5,6 @@
 #include <chrono>
 #include <QMessageBox>
 #include <QFileDialog>
-#include <fstream>
 #include <iomanip>
 #include <map>
 #include <algorithm>
@@ -91,9 +90,8 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
     void MainWindow::sceua() {
 
-        clock_t begin_sceua;
-        begin_sceua = clock();
-        srand(time(NULL));
+        //clock_t begin_sceua;
+        //begin_sceua = clock();
 
         total_count = 0;
         better = 0;
@@ -133,7 +131,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
         // ---
 
-        int maxn = 1500;
+        int maxn = 1000;
 
         /*if(ui->checkBox_parametros->isChecked())    //kcr
             x0.push_back(2.0213);
@@ -207,108 +205,26 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         }
 
         int i;
+
         //clock_t begin_time;
 
         omp_set_num_threads(omp_get_max_threads());
         #pragma omp parallel for private(i) schedule(static)
         for(i = 0; i < npt; i++) {
 
-            #pragma omp critical
-                cout << "Iniciando loop " << i << "." << endl;
-
             float r = hydrological_routine(x.at(i), tot_dias, false);
 
             #pragma omp critical
             {
+                icall++;
                 xf.push_back(r);
-                cout << "\nLoop " << i << " RMSE: " << r << endl << endl;
+                cout << i << " RMSE: " << r << endl;
             }
         }
         #pragma omp barrier
 
 
-     //   cout << "Fim do cálculo de RMSE, iniciando pt2\n";
-
-        //código para fins acadêmicos
-    /*    xf.push_back(1.48814);
-        xf.push_back(1.48627);
-        xf.push_back(1.70392);
-        xf.push_back(1.56368);
-        xf.push_back(1.47106);
-        xf.push_back(2.78047);
-        xf.push_back(2.34897);
-        xf.push_back(2.57968);
-        xf.push_back(1.71421);
-        xf.push_back(1.52463);
-        xf.push_back(1.84637);
-        xf.push_back(1.58905);
-        xf.push_back(1.94826);
-        xf.push_back(2.47317);
-        xf.push_back(1.9118);
-        xf.push_back(1.80122);
-        xf.push_back(2.90578);
-        xf.push_back(2.13002);
-        xf.push_back(1.71444);
-        xf.push_back(1.79674);
-        xf.push_back(3.28654);
-        xf.push_back(1.4228);
-        xf.push_back(2.69704);
-        xf.push_back(2.59931);
-        xf.push_back(14.9418);
-        xf.push_back(1.70445);
-        xf.push_back(1.51432);
-        xf.push_back(2.34553);
-        xf.push_back(2.57833);
-        xf.push_back(2.00606);
-        xf.push_back(1.4754);
-        xf.push_back(1.80335);
-        xf.push_back(2.27863);
-        xf.push_back(2.13251);
-        xf.push_back(1.6062);
-        xf.push_back(3.13469);
-        xf.push_back(1.49792);
-        xf.push_back(1.70897);
-        xf.push_back(1.8492);
-        xf.push_back(2.61157);
-        xf.push_back(2.55223);
-        xf.push_back(2.17108);
-        xf.push_back(1.55858);
-        xf.push_back(1.48856);
-        xf.push_back(2.13879);
-        xf.push_back(2.32624);
-        xf.push_back(1.63237);
-        xf.push_back(1.53213);
-        xf.push_back(1.90212);
-        xf.push_back(1.71208);
-        xf.push_back(1.76119);
-        xf.push_back(2.29582);
-        xf.push_back(1.81799);
-        xf.push_back(3.75195);
-        xf.push_back(3.18964);
-        xf.push_back(2.84476);
-        xf.push_back(2.91534);
-        xf.push_back(1.52061);
-        xf.push_back(1.49778);
-        xf.push_back(1.47806);
-        xf.push_back(1.65241);
-        xf.push_back(3.17681);
-        xf.push_back(2.10404);
-        xf.push_back(1.80703);
-        xf.push_back(1.54959);
-        xf.push_back(2.0237);
-        xf.push_back(1.42918);
-        xf.push_back(2.99572);
-        xf.push_back(3.30334);
-        xf.push_back(1.63166);
-        xf.push_back(1.83934);
-        xf.push_back(1.49267);
-        xf.push_back(3.9123); //fake
-        xf.push_back(2.8526);
-        xf.push_back(1.71648);
-        //fim do código para fins acadêmicos */
-
-
-       /* */
+        cout << "Fim do cálculo de RMSE, iniciando pt2\n";
 
         vector<pair<float, vector<float>>> xf_to_f;
 
@@ -317,6 +233,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             xf_to_f.push_back(make_pair(xf.at(i), x.at(i)));
 
         sort(xf_to_f.begin(), xf_to_f.end());
+        sort(xf.begin(), xf.end());
 
         vector<vector<float>> x_ordered;
 
@@ -324,10 +241,10 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         for(int i = 0; i < npt; i++)
             x_ordered.push_back(xf_to_f.at(i).second);
 
-        bestx = x_ordered.at(0);    //bestx recebe melhores parâmetros
+        bestx = xf_to_f.at(0).second;    //bestx recebe melhores parâmetros
         bestf = xf_to_f.at(0).first;   //bestf recebe melhor xf
 
-        worstx = x_ordered.at(npt - 1); //worstx recebe piores parâmetros
+        worstx = xf_to_f.at(npt - 1).second; //worstx recebe piores parâmetros
         worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
 
         //calcula média
@@ -359,21 +276,15 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         int nloop = 0;
         size_m = 0;
 
-        cout << "RMSE(s):\n"
-        for(int i = 0; i < npt; i++) {
-            cout << xf_to_f.at(i).first << endl;
-        }
-        cout << "\n---------------------------------------------------\n";
-
         cout << "While\n";
         int icount = 1;
 
         while(icall < maxn) { //loop contando iterações
+            srand(time(NULL));
             cout << "Icall: " << icall << endl;
             nloop++;
 
             int igs;
-            clock_t bt = clock();
 
             #pragma omp parallel for private(igs)
             for(igs = 0; igs < ngs; igs++) {    //0 a 5
@@ -387,6 +298,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
                     cf.at(k1) = xf.at(k2);    //cf recebe xf embaralhado
                     cx.at(k1) = x_ordered.at(k2); //cx recebe x embaralhado
+
                 }
 
                 for(int i = 0; i < nspl; i++) { //0 a 15
@@ -414,7 +326,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
                     sort(lcs.begin(), lcs.end());   //ordena lcs
                     vector<vector<float>> s(nps, vector<float>(nopt));
-                    vector<float> snew;
                     vector<float> sf(nps);
 
                     for(int j = 0; j < nps; j++) {
@@ -422,20 +333,52 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                         sf.at(j) = cf.at(lcs.at(j));
                     }
 
-                    float cce = cceua(&snew, s, sf, bl, bu, tot_dias);
+                    vector<float> cce = cceua(s, sf, bl, bu, tot_dias);
+
+                    vector<float>:: const_iterator first = cce.begin();
+                    vector<float>:: const_iterator last = cce.begin() + nopt;
+                    vector<float> snew(first, last);
+
+                    #pragma omp critical
+                    {
+                        if(omp_get_thread_num() == 0) {
+                            cout << "IN: ";
+                            for(uint ii = 0; ii < cce.size(); ii++) {
+                                cout << cce.at(ii) << " ";
+                            }
+                            cout << endl << "OUT: ";
+                            for(int ii = 0; ii < nopt; ii++) {
+                                cout << s.at(nps-1).at(ii) << " ";
+                            }
+                            cout << sf.at(nps-1) << endl;
+                        }
+                    }
 
                     s.at(nps - 1) = snew;
-                    sf.at(nps - 1) = cce;
+                    sf.at(nps - 1) = cce.back();
 
                     //põe o simplex no complex
-                    for(int j = 0; j < nps; j++) {
-                        cx.at(lcs.at(j)) = s.at(j);
-                        cf.at(lcs.at(j)) = sf.at(j); 
+                    for(int ij = 0; ij < nps; ij++) {
+                        cx.at(lcs.at(ij)) = s.at(ij);
+                        cf.at(lcs.at(ij)) = sf.at(ij);
+                    }
+
+                    //ordenar complex
+                    vector<pair<float, vector<float>>> order_c;
+                    for(uint kj = 0; kj < cf.size(); kj++)
+                        order_c.push_back(make_pair(cf.at(kj), cx.at(kj)));
+
+                    sort(order_c.begin(), order_c.end());
+
+                    for(uint lj = 0; lj < cf.size(); lj++) {
+                        cf.at(lj) = order_c.at(lj).first;
+                        cx.at(lj) = order_c.at(lj).second;
                     }
                 }
 
                 //põe o complex na população
                 for(int k1 = 0; k1 < npg; k1++) {   //0 a 15
+
                     int k2 = k1 * ngs + igs;
 
                     x_ordered.at(k2) = cx.at(k1);
@@ -445,7 +388,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             }
             #pragma omp barrier
 
-            cout << "Fim: " <<  float(clock() - bt) /  CLOCKS_PER_SEC  << "s" << endl;
+            //cout << "Fim: " <<  float(clock() - bt) /  CLOCKS_PER_SEC  << "s" << endl;
 
             //ordena x de acordo com xf
             vector<pair<float, vector<float>>> new_xf_to_f;
@@ -489,11 +432,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
             cout << "AVERAGE (ERRORS): " << media_rmse << endl << endl;
 
-            cout << "RMSE(s):\n"
-	        for(int i = 0; i < npt; i++) 
-	            cout << new_xf_to_f.at(i).first << endl;
-	        
-
             cout << "----------------------------------------------\n\n";
 
             vector<vector<float>> f_matrix(npt, vector<float>(nopt + 2));
@@ -516,7 +454,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
         for(int i = 0; i < size_m; i++) {
             for(int j = 0; j < npt; j++) {
-                for(int k = 0; k < nopt; k++) {
+                for(int k = 0; k < nopt + 2; k++) {
                     cout << matrices.at(i).at(j).at(k) << " ";
                 }
                 cout << endl;
@@ -524,7 +462,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             cout << "\n---------------------------------------------------\n\n";
         }
 
-        cout << "MEDIA DE CADA ITERACAO:\n ";
+        cout << "MEDIA DE CADA ITERACAO:\n";
         for(uint i = 0; i < media_vec.size(); i++)
             cout << i + 1 << ": " << media_vec.at(i) << endl;
 
@@ -542,12 +480,12 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         for(int i = 0; i < 7; i++)
             real_bp.push_back(matrices.at(bp.first).at(bp.second).at(i + 1));
 
-        cout << "\n\n\nFIM\n\n\n";
+        cout << "\n\nFIM\n\n";
         for(uint i = 0; i < real_bp.size(); i++)
             cout << real_bp.at(i) << " ";
         cout << endl;
 
-        cout << "\nTempo total: " << float( clock() - begin_sceua ) /  CLOCKS_PER_SEC << "s\n";
+        //cout << "\nTempo total: " << float( clock() - begin_sceua ) /  CLOCKS_PER_SEC << "s\n";
 
         //GRÁFICO
         hydrological_routine(bestx, tot_dias, true);
@@ -605,41 +543,53 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         return make_pair(indice_i, indice_j);
     }
 
-    float MainWindow::cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
+    vector<float> MainWindow::cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
         vector<float> sb = s.at(0); //sb melhor s
         vector<float> sw = s.at(6); //sw pior s
+
+        vector<float> snew;
+
+        srand(time(NULL));
 
         float fw = sf.at(sf.size() - 1);    //fw pior sf
         float alpha = 1.0, beta = 0.5;
 
         vector<float> ce;
 
+        /*
+            ce[0] -> kcr
+            ce[1] -> kb
+            ce[2] -> kss
+            ce[3] -> cs
+            ce[4] -> css
+            ce[5] -> cb
+            ce[6] -> lambda
+        */
+
         for(uint k = 0; k < s.at(0).size(); k++) { //7
             float sum = 0;
 
-            for(uint j =0; j < sf.size() - 1; j++) //8 - 1, média dos parâmetros
+            for(uint j =0; j < s.at(0).size(); j++)
                 sum += s.at(j).at(k);
 
             float media = sum / 7; //nps - 1
             ce.push_back(media);
 
             float svalue = ce.at(k) + alpha * (ce.at(k) - sw.at(k));
-            snew->push_back(svalue);
+            snew.push_back(svalue);
         }
 
-
-        for(uint j = 0; j < snew->size(); j++) { //verifica os limites
-            float s1 = snew->at(j) - bl.at(j);
-            float s2 = bu.at(j) - snew->at(j);
+        for(uint j = 0; j < snew.size(); j++) { //verifica os limites
+            float s1 = snew.at(j) - bl.at(j);
+            float s2 = bu.at(j) - snew.at(j);
 
             if(s1 < 0 || s2 < 0)
-                snew->at(j) = bl.at(j) + ((1 + (rand() % 7 + 1)) * (bu.at(j) - bl.at(j))); //7 nopt
-
+                snew.at(j) = bl.at(j) + ((1 + (rand() % 7 + 1)) * (bu.at(j) - bl.at(j))); //7 nopt
         }
 
         float fnew;
         bool reflection = true, contraction = false;
-        fnew = hydrological_routine(*snew, tot_dias, false);
+        fnew = hydrological_routine(snew, tot_dias, false);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
@@ -647,20 +597,20 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             reflection = false;
             contraction = true;
 
-            for(uint j = 0; j < snew->size(); j++)
-                snew->at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
+            for(uint j = 0; j < snew.size(); j++)
+                snew.at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
-            fnew = hydrological_routine(*snew, tot_dias, false);
+            fnew = hydrological_routine(snew, tot_dias, false);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
 
                 contraction = false;
 
-                for(uint j = 0; j < snew->size(); j++)
-                    snew->at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
+                for(uint j = 0; j < snew.size(); j++)
+                    snew.at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                fnew = hydrological_routine(*snew, tot_dias, false);
+                fnew = hydrological_routine(snew, tot_dias, false);
                 icall++;
             }
         }
@@ -672,11 +622,9 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             if(fnew < fw)
                 better++;
             else {	//caso não melhore, mantém o erro antigo e seus parâmetros
-            	fnew = fw;
-
-            	for(int j = 0; j < snew->size(); j++)
-            		snew->at(j) = sw.at(j);            	
-
+               /* fnew = fw;
+                for(uint j = 0; j < snew->size(); j++)
+                    snew->at(j) = sw.at(j);     */
                 worse++;
             }
 
@@ -688,7 +636,8 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                 random++;
         }
 
-        return fnew;
+        snew.push_back(fnew);
+        return snew;
     }
 
 

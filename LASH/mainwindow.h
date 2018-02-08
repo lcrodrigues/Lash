@@ -43,7 +43,7 @@ private slots:
 
     pair<int, int> best_parameters(int npt, int nopt);
 
-    float cceua(vector<float> *snew, vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias);
+    vector<float> cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias);
 
     float hydrological_routine(vector<float> x, float tot_dias, bool best_p);
 
