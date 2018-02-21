@@ -32,8 +32,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
     {
         ui->setupUi(this);
-
-
     }
     
     MainWindow::~MainWindow()
@@ -185,7 +183,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         float bestf, worstf;
         int tot_dias = ui->num_dias->text().toInt(NULL);
 
-        vector<float> bound, bestx, worstx, xf;
+        vector<float> bound, bestx, worstx, xf(npt);
 
         for(uint i = 0; i < bu.size(); i++)
             bound.push_back(bu.at(i) - bl.at(i));
@@ -207,24 +205,23 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         int i;
 
         //clock_t begin_time;
+        cout << "start\n";
 
         omp_set_num_threads(omp_get_max_threads());
+
         #pragma omp parallel for private(i) schedule(static)
         for(i = 0; i < npt; i++) {
 
             float r = hydrological_routine(x.at(i), tot_dias, false);
 
-            #pragma omp critical
-            {
+            #pragma omp atomic
                 icall++;
-                xf.push_back(r);
-                cout << i << " RMSE: " << r << endl;
-            }
+
+            xf.at(i) = r;
         }
         #pragma omp barrier
 
-
-        cout << "Fim do cálculo de RMSE, iniciando pt2\n";
+       cout << "Fim do cálculo de RMSE, iniciando pt2\n";
 
         vector<pair<float, vector<float>>> xf_to_f;
 
@@ -235,9 +232,23 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         sort(xf_to_f.begin(), xf_to_f.end());
         sort(xf.begin(), xf.end());
 
-        vector<vector<float>> x_ordered;
+        //põe primeira matriz no conjunto de todas as matrizes
+        vector<vector<float>> first_matrix(npt, vector<float>(nopt + 2));
+        for(int i = 0; i < npt; i++) {
+            first_matrix.at(i).at(0) = i +1;
+
+            for(int j = 0; j < nopt; j++)
+                first_matrix.at(i).at(j + 1) = xf_to_f.at(i).second.at(j);
+
+            first_matrix.at(i).at(nopt + 1) = xf_to_f.at(i).first;
+        }
+
+        matrices.push_back(first_matrix);
+        size_m++;
 
         //cria matriz x ordenada
+        vector<vector<float>> x_ordered;
+
         for(int i = 0; i < npt; i++)
             x_ordered.push_back(xf_to_f.at(i).second);
 
@@ -249,6 +260,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
         //calcula média
         float media_rmse = 0;
+
         #pragma omp parallel for private(i) reduction(+ : media_rmse)
         for(uint i = 0; i < xf.size(); i++)  media_rmse += xf.at(i);
 
@@ -437,7 +449,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             vector<vector<float>> f_matrix(npt, vector<float>(nopt + 2));
             for(int j = 0; j < npt; j++) {
 
-                f_matrix.at(j).at(0) = icount;
+                f_matrix.at(j).at(0) = icount + npt;
 
                 for(int k = 0; k < nopt; k++)
                     f_matrix.at(j).at(k + 1) = new_xf_to_f.at(j).second.at(k);
@@ -454,15 +466,14 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
         for(int i = 0; i < size_m; i++) {
             for(int j = 0; j < npt; j++) {
-                for(int k = 0; k < nopt + 2; k++) {
+                for(int k = 0; k < nopt + 2; k++)
                     cout << matrices.at(i).at(j).at(k) << " ";
-                }
                 cout << endl;
             }
             cout << "\n---------------------------------------------------\n\n";
         }
 
-        cout << "MEDIA DE CADA ITERACAO:\n";
+        cout << "MEDIA DE ERROS DE CADA ITERACAO:\n";
         for(uint i = 0; i < media_vec.size(); i++)
             cout << i + 1 << ": " << media_vec.at(i) << endl;
 
