@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <map>
 #include <algorithm>
+#include <bits/stdc++.h>
 
 #include <omp.h>
 
@@ -98,6 +99,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         con = 0;
         random = 0;
 
+        int tot_dias = ui->num_dias->text().toInt(NULL);
         icall = 0;
         int ngs = 5;
         int iniflg = 1;
@@ -174,14 +176,13 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             x0.push_back(ui->lineEdit_coef->text().toFloat(NULL));*/
 
         //Initialize SCE parameters:
-
         int nopt = x0.size();
         int npg = 2 * nopt + 1;
         int nps = nopt + 1;
         int nspl = npg;
         int npt = npg * ngs;
         float bestf, worstf;
-        int tot_dias = ui->num_dias->text().toInt(NULL);
+
 
         vector<float> bound, bestx, worstx, xf(npt);
 
@@ -202,34 +203,65 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                 x.at(0).at(i) = x0.at(i);
         }
 
+        bool obj = ui->rmse_radio->isChecked();
         int i;
-
-        //clock_t begin_time;
-        cout << "start\n";
 
         omp_set_num_threads(omp_get_max_threads());
 
+        time_t t_st;
+        time_t t_end;
+
+        SubBacia subw;
+
+        VarMeteorologicas met;
+        VarUsoDoSolo usosolo;
+        VarEntrada entrada;
+
+        //Método que seta o número de sub-bacias.
+        subw.setNumSub_b(ui->third_file->text());
+
+        //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
+        met.criaVetor1(subw, tot_dias);
+        met.loadData1(subw, ui->first_file->text(), tot_dias);
+
+        usosolo.criaVetor2(subw, tot_dias);
+        usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
+
+        entrada.criaVetor3(subw);
+        entrada.loadData3(subw, ui->third_file->text());
+
+
+        time(&t_st);
         #pragma omp parallel for private(i) schedule(static)
         for(i = 0; i < npt; i++) {
+            float r = hydrological_routine(x.at(i), tot_dias, false, subw, met, usosolo, entrada);
 
-            float r = hydrological_routine(x.at(i), tot_dias, false);
+            #pragma omp critical
+            {
+                if(obj)
+                    cout << "RMSE " << i << ": " << r << endl;
+                else
+                    cout << "CNS " << i << ": " << r << endl;
 
-            #pragma omp atomic
                 icall++;
-
+            }
             xf.at(i) = r;
         }
         #pragma omp barrier
+        time(&t_end);
 
-       cout << "Fim do cálculo de RMSE, iniciando pt2\n";
+        //cout << "Tempo de calibracao para " << tot_dias << " dias com " << omp_get_max_threads() << " threads: " << t_end - t_st << "s.\n";
+        //cout << "Tempo de calibracao para " << tot_dias << " dias sequencialmente: " << t_end - t_st << "s.\n";
 
-        vector<pair<float, vector<float>>> xf_to_f;
+        cout << "Fim do cálculo de RMSE, iniciando pt2\n";
+
+        vector<pair<float, vector<float>>> link_xxf;
 
         //liga x com xf
         for(int i = 0; i < npt; i++)
-            xf_to_f.push_back(make_pair(xf.at(i), x.at(i)));
+            link_xxf.push_back(make_pair(xf.at(i), x.at(i)));
 
-        sort(xf_to_f.begin(), xf_to_f.end());
+        sort(link_xxf.begin(), link_xxf.end());
         sort(xf.begin(), xf.end());
 
         //põe primeira matriz no conjunto de todas as matrizes
@@ -238,25 +270,26 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             first_matrix.at(i).at(0) = i +1;
 
             for(int j = 0; j < nopt; j++)
-                first_matrix.at(i).at(j + 1) = xf_to_f.at(i).second.at(j);
+                first_matrix.at(i).at(j + 1) = link_xxf.at(i).second.at(j);
 
-            first_matrix.at(i).at(nopt + 1) = xf_to_f.at(i).first;
+            first_matrix.at(i).at(nopt + 1) = link_xxf.at(i).first;
         }
 
         matrices.push_back(first_matrix);
         size_m++;
 
+
         //cria matriz x ordenada
         vector<vector<float>> x_ordered;
 
         for(int i = 0; i < npt; i++)
-            x_ordered.push_back(xf_to_f.at(i).second);
+            x_ordered.push_back(link_xxf.at(i).second);
 
-        bestx = xf_to_f.at(0).second;    //bestx recebe melhores parâmetros
-        bestf = xf_to_f.at(0).first;   //bestf recebe melhor xf
+        bestx = link_xxf.at(0).second;    //bestx recebe melhores parâmetros
+        bestf = link_xxf.at(0).first;   //bestf recebe melhor xf
 
-        worstx = xf_to_f.at(npt - 1).second; //worstx recebe piores parâmetros
-        worstf = xf_to_f.at(npt - 1).first; //worstf recebe pior xf
+        worstx = link_xxf.at(npt - 1).second; //worstx recebe piores parâmetros
+        worstf = link_xxf.at(npt - 1).first; //worstf recebe pior xf
 
         //calcula média
         float media_rmse = 0;
@@ -345,13 +378,13 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                         sf.at(j) = cf.at(lcs.at(j));
                     }
 
-                    vector<float> cce = cceua(s, sf, bl, bu, tot_dias);
+                    vector<float> cce = cceua(s, sf, bl, bu, tot_dias, subw, met, usosolo, entrada);
 
                     vector<float>:: const_iterator first = cce.begin();
                     vector<float>:: const_iterator last = cce.begin() + nopt;
                     vector<float> snew(first, last);
 
-                    #pragma omp critical
+                  /*  #pragma omp critical
                     {
                         if(omp_get_thread_num() == 0) {
                             cout << "IN: ";
@@ -364,7 +397,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                             }
                             cout << sf.at(nps-1) << endl;
                         }
-                    }
+                    }   */
 
                     s.at(nps - 1) = snew;
                     sf.at(nps - 1) = cce.back();
@@ -499,7 +532,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         //cout << "\nTempo total: " << float( clock() - begin_sceua ) /  CLOCKS_PER_SEC << "s\n";
 
         //GRÁFICO
-        hydrological_routine(bestx, tot_dias, true);
+        hydrological_routine(bestx, tot_dias, true, subw, met, usosolo, entrada);
         QChart *chart = new QChart();
         chart->legend()->hide();
         chart->setTitle("Valores observados e calculados");
@@ -554,7 +587,8 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         return make_pair(indice_i, indice_j);
     }
 
-    vector<float> MainWindow::cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias) {
+    vector<float> MainWindow::cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias,
+                                    SubBacia subw, VarMeteorologicas met, VarUsoDoSolo usosolo, VarEntrada entrada) {
         vector<float> sb = s.at(0); //sb melhor s
         vector<float> sw = s.at(6); //sw pior s
 
@@ -600,7 +634,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
 
         float fnew;
         bool reflection = true, contraction = false;
-        fnew = hydrological_routine(snew, tot_dias, false);
+        fnew = hydrological_routine(snew, tot_dias, false, subw, met, usosolo, entrada);
         icall++;
 
         if(fnew > fw) { //reflexão falhou, tentando ponto de contração
@@ -611,7 +645,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             for(uint j = 0; j < snew.size(); j++)
                 snew.at(j) = sw.at(j) + beta * (ce.at(j) - sw.at(j));
 
-            fnew = hydrological_routine(snew, tot_dias, false);
+            fnew = hydrological_routine(snew, tot_dias, false, subw, met, usosolo, entrada);
             icall++;
 
             if(fnew > fw) { //reflexão e contração falharam, tentando ponto aleatório
@@ -621,7 +655,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
                 for(uint j = 0; j < snew.size(); j++)
                     snew.at(j) = bl.at(j) + ((rand() % 7 + 1) * (bu.at(j) - bl.at(j)));  //7 -> nopt
 
-                fnew = hydrological_routine(snew, tot_dias, false);
+                fnew = hydrological_routine(snew, tot_dias, false, subw, met, usosolo, entrada);
                 icall++;
             }
         }
@@ -651,10 +685,11 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         return snew;
     }
 
-
-    float MainWindow::hydrological_routine(vector<float> x, float tot_dias, bool best_p) {
+    float MainWindow::hydrological_routine(vector<float> x, float tot_dias, bool best_p, SubBacia subw,
+                                           VarMeteorologicas met, VarUsoDoSolo usosolo, VarEntrada entrada) {
         int i, j, dia, sub_b = 0;
-        float kcr, Kb, Kss, Cs, Css, Cb, Coef_Ia, rmse = 0;
+        float kcr, Kb, Kss, Cs, Css, Cb, Coef_Ia, obj_f = 0, vmedia_obs = 0;
+        vector<float> vobs_aux;
         bool flag = false;
 
         kcr = x.at(0);
@@ -669,11 +704,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         float h_sistrad2;
 
         VarDiaAnterior anterior;
-        SubBacia subw;
-
-        VarMeteorologicas met;
-        VarUsoDoSolo usosolo;
-        VarEntrada entrada;
 
         VarEvapotranspiracao evapo;
         VarInterceptacao intercep;
@@ -681,21 +711,6 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         VarESD ESD;
         VarESS ESS;
         VarEB EB;
-
-        //Método que seta o número de sub-bacias.
-        subw.setNumSub_b(ui->third_file->text());
-
-        //Armazena arquivos de entrada em memória para facilitar acesso aos dados.
-
-
-        met.criaVetor1(subw, tot_dias);
-        met.loadData1(subw, ui->first_file->text(), tot_dias);
-
-        usosolo.criaVetor2(subw, tot_dias);
-        usosolo.loadData2(subw, ui->second_file->text(), tot_dias);
-
-        entrada.criaVetor3(subw);
-        entrada.loadData3(subw, ui->third_file->text());
 
         anterior.iniciaVetores(subw);
 
@@ -922,6 +937,9 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             }
             else{
                 dif_valores += pow((met.dado_observado - vazao_diaria), 2);
+
+                vobs_aux.push_back(met.dado_observado);
+                vmedia_obs += met.dado_observado;
                 flag = true;
             }
 
@@ -933,8 +951,23 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
             vazao_total.push_back(vazao_diaria);
         }
 
-        if(flag)
-             rmse = sqrt(dif_valores/total_dias_observados);
+        if(flag) {
+
+            if(ui->rmse_radio->isChecked()) {
+                //RMSE
+                obj_f = sqrt(dif_valores/total_dias_observados);
+            }
+            else if(ui->cns_radio->isChecked()) {
+                //CNS
+                float sum_obs = 0;
+                vmedia_obs /= total_dias_observados;
+
+                for(int k = 0; k < total_dias_observados; k++)
+                    sum_obs += pow(vobs_aux.at(k) - vmedia_obs, 2);
+
+                obj_f = 1 - (dif_valores/sum_obs);
+            }
+        }
 
         //Depois de terminar a execução ele abre a segunda tela para mostrar os resultados.
         //second = new SecondWindow(this); //secondwindow é a classe; second é o ponteiro declarado antes;
@@ -961,7 +994,7 @@ using namespace std::chrono; // nanoseconds, system_clock, seconds
         outFile.close();
         fileTest.close();   */
 
-        return rmse;
+        return obj_f;
     //=========================================================================================================
     }
 

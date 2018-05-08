@@ -6,6 +6,7 @@
 
 #include "secondwindow.h"
 #include "helpdialog.h"
+#include "varclasses.h"
 
 using namespace std;
 
@@ -43,9 +44,11 @@ private slots:
 
     pair<int, int> best_parameters(int npt, int nopt);
 
-    vector<float> cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu, int tot_dias);
+    vector<float> cceua(vector<vector<float>> s, vector<float> sf, vector<float> bl, vector<float> bu,
+                        int tot_dias, SubBacia subw, VarMeteorologicas met, VarUsoDoSolo usosolo, VarEntrada entrada);
 
-    float hydrological_routine(vector<float> x, float tot_dias, bool best_p);
+    float hydrological_routine(vector<float> x, float tot_dias, bool best_p,
+                               SubBacia subw, VarMeteorologicas met, VarUsoDoSolo usosolo, VarEntrada entrada);
 
 private:
     Ui::MainWindow *ui;
